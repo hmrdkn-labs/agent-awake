@@ -110,7 +110,7 @@ final class Model: ObservableObject {
     func keepAwake(_ duration: Double?) { engine.setManual(duration: duration) }
 
     func testPing() {
-        notifier.send(title: "Agent Awake", body: "Test ping. Your phone is set up.")
+        notifier.send(Alert(title: "Agent Awake", body: "Test ping. Your phone is set up."))
     }
 
     func copyTopic() {

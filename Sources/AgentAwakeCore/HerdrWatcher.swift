@@ -57,17 +57,24 @@ public enum HerdrCLI {
 
 /// Turns herdr's agent states into sessions: working => session alive (heartbeat each poll);
 /// leaving "working" for `quietPolls` polls in a row => done, so brief idle flickers don't ping.
+/// Battery: `herdr agent list` is spawned only while a herdr process exists, every `interval` while an
+/// agent is working and every `idleEvery` intervals otherwise.
 public final class HerdrWatcher {
     private let engine: Engine
     private let fetch: () -> Data?
+    private let isRunning: () -> Bool
     private let quietPolls: Int
+    private let idleEvery: Int
     private let sessionTimeout: Double
     private var tracked: [String: (name: String, quiet: Int, last: String)] = [:]
+    private var ticks = 0
     private var timer: DispatchSourceTimer?
     private let lock = NSLock()
 
-    public init(engine: Engine, interval: Double = 3, quietPolls: Int = 2, fetch: @escaping () -> Data?) {
-        self.engine = engine; self.fetch = fetch; self.quietPolls = quietPolls
+    public init(engine: Engine, interval: Double = 3, quietPolls: Int = 2, idleEvery: Int = 4,
+                isRunning: @escaping () -> Bool = { ProcessList.contains("herdr") }, fetch: @escaping () -> Data?) {
+        self.engine = engine; self.fetch = fetch; self.isRunning = isRunning
+        self.quietPolls = quietPolls; self.idleEvery = idleEvery
         self.sessionTimeout = max(60, interval * 10)
         self.interval = interval
     }
@@ -75,39 +82,64 @@ public final class HerdrWatcher {
 
     public func start() {
         let t = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "agentawake.herdr"))
-        t.schedule(deadline: .now(), repeating: interval)
-        t.setEventHandler { [weak self] in self?.poll() }
+        t.schedule(deadline: .now(), repeating: interval, leeway: .seconds(1))
+        t.setEventHandler { [weak self] in self?.tick() }
         t.resume()
         timer = t
+    }
+
+    func tick() {
+        lock.lock(); let idle = tracked.isEmpty; ticks += 1; let n = ticks; lock.unlock()
+        if idle && (n - 1) % idleEvery != 0 { return }
+        poll()
     }
 
     public func stop() {
         timer?.cancel(); timer = nil
         lock.lock(); let all = tracked; tracked = [:]; lock.unlock()
-        for (_, v) in all { _ = engine.handle(Request(cmd: "done", name: v.name, message: "Herdr watching stopped.")) }
+        for (_, v) in all { _ = engine.handle(Request(cmd: "done", name: v.name, kind: .ended)) }
     }
 
+    /// Agents whose own hooks report to us (connected integrations); herdr would only double-count them.
+    public var skipAgents: Set<String> {
+        get { lock.lock(); defer { lock.unlock() }; return skip }
+        set { lock.lock(); skip = newValue; lock.unlock() }
+    }
+    private var skip: Set<String> = []
+
     public func poll() {
-        guard let data = fetch(), let agents = HerdrCLI.parse(data) else { return }   // herdr unreachable: change nothing
+        let agents: [AgentSnapshot]
+        if !isRunning() {
+            agents = []                                   // herdr quit: its panes are gone
+        } else {
+            guard let data = fetch(), let a = HerdrCLI.parse(data) else { return }   // unreachable: change nothing
+            agents = a
+        }
         lock.lock(); defer { lock.unlock() }
         let byPane = Dictionary(agents.map { ($0.paneID, $0) }, uniquingKeysWith: { a, _ in a })
-        for a in agents where a.status == "working" {
+        for a in agents where a.status == "working" && !skip.contains(a.agent) {
             if var t = tracked[a.paneID] {
                 t.quiet = 0; t.last = a.status; tracked[a.paneID] = t
-                _ = engine.handle(Request(cmd: "beat", name: t.name, label: a.label))
+                _ = engine.handle(Request(cmd: "beat", name: t.name, label: a.label, agent: a.agent, timeout: sessionTimeout))
             } else {
                 let name = "\(a.agent) \(a.paneID)"
                 tracked[a.paneID] = (name, 0, a.status)
-                _ = engine.handle(Request(cmd: "begin", name: name, label: a.label, timeout: sessionTimeout))
+                _ = engine.handle(Request(cmd: "begin", name: name, label: a.label, agent: a.agent, timeout: sessionTimeout))
             }
         }
-        for (pane, t) in tracked where byPane[pane]?.status != "working" {
+        for (pane, t) in tracked where byPane[pane]?.status != "working" || skip.contains(byPane[pane]?.agent ?? "") {
             let status = byPane[pane]?.status ?? "closed"
             var n = t; n.quiet += 1; n.last = status
             if n.quiet >= quietPolls {
                 tracked[pane] = nil
-                let msg = status == "blocked" ? "Blocked — it needs you." : status == "closed" ? "Pane closed." : "Finished."
-                _ = engine.handle(Request(cmd: "done", name: t.name, message: msg))
+                switch status {
+                case "blocked":
+                    _ = engine.handle(Request(cmd: "wait", name: t.name, message: "It is blocked on a question or permission."))
+                case "closed":
+                    _ = engine.handle(Request(cmd: "done", name: t.name, kind: .ended))
+                default:
+                    _ = engine.handle(Request(cmd: "done", name: t.name, kind: .finished))
+                }
             } else {
                 tracked[pane] = n
                 _ = engine.handle(Request(cmd: "beat", name: t.name))

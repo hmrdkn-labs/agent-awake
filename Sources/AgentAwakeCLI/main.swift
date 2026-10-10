@@ -69,21 +69,26 @@ case "list":
         print("\(s.name)\t\(age)\ttimeout=\(s.timeout == 0 ? "none" : formatDuration(s.timeout))")
     }
 case "run":
+    // The wrapped command always runs and its exit status is ours, whether or not the app is up.
     guard let name = positional.first, !command.isEmpty else { fail(usage, code: 2) }
-    _ = call(Request(cmd: "begin", name: name, timeout: timeout))
+    let limit = timeout ?? SessionStore.defaultTimeout
+    do { _ = try Client.send(Request(cmd: "begin", name: name, timeout: limit)) } catch {
+        FileHandle.standardError.write(Data("agentawake: \(error); running without keeping the Mac awake\n".utf8))
+    }
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
     p.arguments = command
-    do { try p.run() } catch { _ = call(Request(cmd: "done", name: name)); fail("agentawake: \(error)") }
-    // Heartbeat at a third of the timeout (default 30m -> 10m), at most every 30s.
-    let period = min(30, max(1, (timeout ?? SessionStore.defaultTimeout) / 3))
+    do { try p.run() } catch { _ = try? Client.send(Request(cmd: "done", name: name)); fail("agentawake: \(error)") }
+    // Heartbeat at a third of the timeout (default 30m -> 10m), at most every 30s. The beat carries the
+    // timeout, so it recreates the session if the app restarted meanwhile.
+    let period = min(30, max(1, limit / 3))
     let t = DispatchSource.makeTimerSource(queue: .global())
     t.schedule(deadline: .now() + period, repeating: period)
-    t.setEventHandler { _ = try? Client.send(Request(cmd: "beat", name: name)) }
+    t.setEventHandler { _ = try? Client.send(Request(cmd: "beat", name: name, timeout: limit)) }
     t.resume()
     p.waitUntilExit()
     t.cancel()
-    _ = call(Request(cmd: "done", name: name))
+    _ = try? Client.send(Request(cmd: "done", name: name))
     exit(p.terminationStatus)
 default:
     fail(usage, code: 2)

@@ -1,9 +1,5 @@
 import Foundation
 
-public protocol Notifier {
-    func send(title: String, body: String)
-}
-
 public struct Config: Codable {
     public var ntfyServer: String?
     public var ntfyTopic: String?
@@ -45,7 +41,8 @@ public struct NtfyNotifier: Notifier {
     let config: Config
     public init(config: Config) { self.config = config }
 
-    public func send(title: String, body: String) {
+    public func send(_ alert: Alert) {
+        let title = alert.title, body = alert.body
         guard let topic = config.ntfyTopic, !topic.isEmpty else {
             FileHandle.standardError.write(Data("[agentawake] \(title): \(body) (no ntfy topic configured)\n".utf8))
             return
