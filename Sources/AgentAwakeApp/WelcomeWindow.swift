@@ -21,14 +21,13 @@ enum WelcomeWindow {
             w.center()
             window = w
         }
+        // Shown automatically once; after that only on request, however it was closed.
+        UserDefaults.standard.set(true, forKey: "welcomed")
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
 
-    static func close() {
-        UserDefaults.standard.set(true, forKey: "welcomed")
-        window?.close()
-    }
+    static func close() { window?.close() }
 }
 
 struct WelcomeView: View {

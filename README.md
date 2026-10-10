@@ -105,6 +105,9 @@ xcrun notarytool store-credentials agent-awake --key <AuthKey.p8> --key-id <id> 
 SIGN_IDENTITY=... scripts/notarize.sh      # checks, notarizes app + DMG: dist/AgentAwake-<version>.dmg
 ```
 
+`scripts/install-local.sh` updates your installed copy in place and relaunches it. Keep that path: macOS
+ties the Login Items and helper approval to it, so a fresh copy somewhere else asks again.
+
 The helper only runs from the signed `.app`, not from `swift run`. `scripts/make-icon.sh` rebuilds the
 icon from `assets/brand/icon-source.png`. The Mac App Store isn't possible, because its sandbox forbids
 the privileged helper.
