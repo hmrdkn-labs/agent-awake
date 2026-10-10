@@ -39,29 +39,44 @@ final class Model: ObservableObject {
         }
     }
     @Published var cliInstalled = CLIInstaller.isInstalled
+    /// Saved config; the Settings window edits a draft and saves through `saveConfig`.
+    @Published private(set) var config: Config
+    @Published private(set) var integrations: [IntegrationState] = []
 
-    let topic: String
-    let ntfyServer: String
+    struct IntegrationState {
+        let integration: Integration
+        let status: IntegrationStatus
+    }
+
+    var topic: String { config.ntfyTopic ?? "" }
+    var ntfyServer: String { (config.ntfyServer ?? "https://ntfy.sh").trimmingCharacters(in: CharacterSet(charactersIn: "/")) }
     let herdrPath: String? = HerdrCLI.locate()
     let engine: Engine
-    private let notifier: Notifier
+    private let local: LocalNotifier
+    private let router: AlertRouter
     private let lid: LidGuard
     private let server: SocketServer
+    private let assertions: AssertionWatcher
     private var herdr: HerdrWatcher?
     private var poll: Timer?
 
     var agents: [SessionInfo] { sessions.filter { $0.name != Engine.manualName } }
     var manual: SessionInfo? { sessions.first { $0.name == Engine.manualName } }
+    var connectedCount: Int { integrations.filter { if case .connected = $0.status { return true }; return false }.count }
+    var needsActionCount: Int { integrations.filter { if case .needsAction = $0.status { return true }; return false }.count }
 
     private init() {
-        let config = Config.loadEnsuringTopic()
-        topic = config.ntfyTopic ?? ""
-        ntfyServer = (config.ntfyServer ?? "https://ntfy.sh").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let n = NtfyNotifier(config: config)
-        notifier = n
-        let e = Engine(notifier: n)
+        let initial = Config.loadEnsuringTopic()
+        config = initial
+        let local = LocalNotifier()
+        self.local = local
+        // Reads the saved config per alert, so Settings changes apply without a restart.
+        let router = AlertRouter(config: { Config.load() }, local: local)
+        self.router = router
+        let e = Engine(notifier: router)
         engine = e
-        lid = LidGuard(controller: XPCSleepController(), notifier: n)
+        lid = LidGuard(controller: XPCSleepController(), notifier: router)
+        assertions = AssertionWatcher(engine: e)
         // "show" comes from a second launch of the app; everything else is session traffic.
         server = SocketServer { [e] req in
             if req.cmd == "show" {
@@ -78,11 +93,17 @@ final class Model: ObservableObject {
             _ = try? Client.send(Request(cmd: "show"))
             exit(0)
         } catch { self.error = "\(error)" }
+        // Hooks call ~/.agent-awake/bin/agentawake; keep it pointing at this copy of the app.
+        if CLIInstaller.canInstall {
+            do { try Integrations.installShim(cliPath: CLIInstaller.source) } catch { self.error = "Hook command: \(error.localizedDescription)" }
+        }
         lid.start()
         if lidMode && helper != .ready && helper != .needsApproval { helper = HelperInstaller.register() }
         FileHandle.standardError.write(Data("[agentawake] helper: \(helper.label)\n".utf8))
+        refreshIntegrations()
         applyHerdr()
-        // Helper approval happens in System Settings; notice it without a relaunch.
+        assertions.start()
+        // Helper approval and Codex hook trust happen outside the app; notice them without a relaunch.
         poll = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshHelper() }
         }
@@ -93,8 +114,34 @@ final class Model: ObservableObject {
         herdr?.stop(); herdr = nil
         guard herdrWatch, let path = herdrPath else { return }
         let w = HerdrWatcher(engine: engine) { HerdrCLI.listAgents(herdr: path) }
+        w.skipAgents = hookedAgents
         w.start()
         herdr = w
+    }
+
+    /// Agents that report through their own hooks; the herdr and assertion watchers leave them alone.
+    private var hookedAgents: Set<String> {
+        Set(integrations.compactMap { if case .connected = $0.status { return $0.integration.id }; return nil })
+    }
+
+    func refreshIntegrations() {
+        integrations = Integrations.all().map { IntegrationState(integration: $0, status: $0.status()) }
+        herdr?.skipAgents = hookedAgents
+        assertions.skipAgents = hookedAgents
+    }
+
+    func connect(_ i: Integration) {
+        do { try i.connect() } catch { self.error = "\(i.name): \(error.localizedDescription)" }
+        refreshIntegrations()
+    }
+
+    func disconnect(_ i: Integration) {
+        do { try i.disconnect() } catch { self.error = "\(i.name): \(error.localizedDescription)" }
+        refreshIntegrations()
+    }
+
+    func saveConfig(_ c: Config) {
+        do { try c.save(); config = c } catch { self.error = "Settings: \(error.localizedDescription)" }
     }
 
     func refreshHelper() {
@@ -109,8 +156,12 @@ final class Model: ObservableObject {
     /// nil = off, 0 = until turned off, otherwise seconds.
     func keepAwake(_ duration: Double?) { engine.setManual(duration: duration) }
 
-    func testPing() {
-        notifier.send(Alert(title: "Agent Awake", body: "Test ping. Your phone is set up."))
+    /// Straight to the phone (or one channel), whether or not the user is at the Mac.
+    func testPing(channel: String? = nil) {
+        let alert = Alert(title: "Agent Awake", body: "Test ping. This channel works.")
+        let targets = Channels.phone(config).filter { channel == nil || $0.name == channel }
+        if targets.isEmpty { local.send(alert) }
+        targets.forEach { $0.notifier.send(alert) }
     }
 
     func copyTopic() {

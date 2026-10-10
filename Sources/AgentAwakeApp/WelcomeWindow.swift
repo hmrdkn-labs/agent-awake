@@ -53,39 +53,56 @@ struct WelcomeView: View {
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.08)))
 
-            step(1, "Track your agents") {
-                if model.herdrPath != nil {
-                    Label("herdr found: working agents are followed automatically.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.callout)
+            step(1, "Connect your agents") {
+                let found = model.integrations.filter { $0.status != .notInstalled }
+                if found.isEmpty {
+                    Text("No supported agent found yet. Claude Code, Codex, Cursor, Gemini CLI, Copilot, OpenCode and more are supported; connect them later in Settings.")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                Text("Any other job: `agentawake run build -- make`, or `begin` / `done` from your agent's hooks.")
-                    .font(.callout).fixedSize(horizontal: false, vertical: true)
-                if CLIInstaller.canInstall {
-                    if model.cliInstalled {
-                        Label("Command installed at ~/.local/bin/agentawake", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green).font(.caption)
-                    } else {
-                        Button("Install the agentawake command") { model.installCLI() }
+                ForEach(found, id: \.integration.id) { row in
+                    HStack {
+                        Text(row.integration.name).font(.callout)
+                        Spacer()
+                        switch row.status {
+                        case .connected:
+                            Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                        case .needsAction(let s):
+                            Text(s).font(.caption).foregroundStyle(.orange).lineLimit(2).frame(maxWidth: 260, alignment: .trailing)
+                        case .broken(let s):
+                            Text(s).font(.caption).foregroundStyle(.red).lineLimit(2)
+                        default:
+                            Button("Connect") { model.connect(row.integration) }
+                        }
                     }
                 }
+                if model.herdrPath != nil {
+                    Label("herdr panes are followed without setup.", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green).font(.caption)
+                }
+                Text("Anything else: `agentawake run build -- make`.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             step(2, "Get pinged on your phone") {
                 HStack(alignment: .top, spacing: 14) {
-                    if let qr = QRCode.image(for: "\(model.ntfyServer)/\(model.topic)") {
+                    if let qr = QRCode.image(for: "ntfy://\(URL(string: model.ntfyServer)?.host ?? "ntfy.sh")/\(model.topic)") {
                         Image(nsImage: qr).interpolation(.none).resizable().frame(width: 112, height: 112)
                             .padding(6).background(RoundedRectangle(cornerRadius: 8).fill(.white))
                     }
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Install the free **ntfy** app on your iPhone, scan this code, and subscribe. That's your private channel; keep it secret.")
+                        Text("Install the free **ntfy** app. On iPhone tap **+** and paste this topic; on Android scan the code. Keep the topic secret: it is your private channel.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
                         Text(model.topic).font(.caption.monospaced()).textSelection(.enabled).foregroundStyle(.secondary)
                         HStack {
                             Button("Copy topic") { model.copyTopic() }
-                            Button("Send test ping") { model.testPing() }
+                            Button("Send test ping") { model.testPing(channel: "ntfy") }
                         }
+                        Button("Use Bark, Pushover, Telegram, Discord or Slack instead…") { SettingsWindow.show(.notifications) }
+                            .buttonStyle(.link).font(.caption)
                     }
                 }
+                Text("Pings go to your phone only while you're away from the Mac; otherwise you get a Mac notification.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             step(3, "Optional: keep working with the lid closed") {

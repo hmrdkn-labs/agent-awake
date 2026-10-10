@@ -28,6 +28,7 @@ struct PanelView: View {
             footer.padding(.horizontal, 14).padding(.vertical, 8)
         }
         .frame(width: 340)
+        .onAppear { model.refreshIntegrations() }   // Codex trust and new installs happen outside the app
     }
 
     // MARK: header
@@ -76,10 +77,10 @@ struct PanelView: View {
                 Image(systemName: "moon.zzz").font(.title3).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("No agents working").font(.callout)
-                    Text(model.herdrPath != nil && model.herdrWatch
-                         ? "herdr agents are picked up automatically."
-                         : "Wrap any job: agentawake run build -- make")
-                        .font(.caption).foregroundStyle(.secondary)
+                    Text(model.connectedCount > 0
+                         ? "Connected agents are picked up when they start."
+                         : "Connect your agents in Settings, or wrap a job: agentawake run build -- make")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
         } else {
@@ -87,11 +88,15 @@ struct PanelView: View {
                 Text("WORKING").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 ForEach(model.agents, id: \.name) { s in
                     HStack(spacing: 8) {
-                        Circle().fill(Color.green).frame(width: 7, height: 7)
+                        Circle().fill(s.state == .waiting ? Color.orange : Color.green).frame(width: 7, height: 7)
                         Text(s.title).font(.callout).lineLimit(1).truncationMode(.tail)
                         Spacer(minLength: 8)
-                        Text(Date(timeIntervalSince1970: s.startedAt), style: .timer)
-                            .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        if s.state == .waiting {
+                            Text("needs you").font(.caption.weight(.medium)).foregroundStyle(.orange)
+                        } else {
+                            Text(Date(timeIntervalSince1970: s.startedAt), style: .timer)
+                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        }
                     }
                     .help(s.name)
                 }
@@ -135,9 +140,6 @@ struct PanelView: View {
 
     private var settings: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if model.herdrPath != nil {
-                toggle("Follow herdr agents", "rectangle.split.3x1", $model.herdrWatch)
-            }
             toggle("Stay awake with lid closed", "laptopcomputer", $model.lidMode)
             if model.lidMode && model.helper != .ready {
                 HStack {
@@ -149,14 +151,36 @@ struct PanelView: View {
                 }
                 .padding(.leading, 26)
             }
-            toggle("Launch at login", "power", $model.launchAtLogin)
-            HStack {
-                Label("Phone pings", systemImage: "iphone.radiowaves.left.and.right").font(.callout)
-                Spacer()
-                Button("Test") { model.testPing() }.controlSize(.small)
-                Button("Set up…") { WelcomeWindow.show() }.controlSize(.small)
+            row("Agents", "cpu", detail: agentsDetail, warn: model.needsActionCount > 0) { SettingsWindow.show(.agents) }
+            row("Notifications", "iphone.radiowaves.left.and.right", detail: notificationsDetail, warn: false) {
+                SettingsWindow.show(.notifications)
             }
         }
+    }
+
+    private var agentsDetail: String {
+        if model.needsActionCount > 0 { return "\(model.needsActionCount) need a step" }
+        return model.connectedCount == 0 ? "None connected" : "\(model.connectedCount) connected"
+    }
+
+    private var notificationsDetail: String {
+        let phones = Channels.phone(model.config).map(\.name)
+        if phones.isEmpty || model.config.effectivePingWhen == .never { return "Mac only" }
+        let when = model.config.effectivePingWhen == .away ? "when away" : "always"
+        return "\(phones.joined(separator: ", ")) \(when)"
+    }
+
+    private func row(_ title: String, _ icon: String, detail: String, warn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Label(title, systemImage: icon).font(.callout)
+                Spacer()
+                Text(detail).font(.caption).foregroundStyle(warn ? Color.orange : Color.secondary).lineLimit(1)
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func toggle(_ title: String, _ icon: String, _ binding: Binding<Bool>) -> some View {
@@ -171,11 +195,7 @@ struct PanelView: View {
 
     private var footer: some View {
         HStack {
-            if CLIInstaller.canInstall && !model.cliInstalled {
-                Button("Install agentawake command") { model.installCLI() }
-            } else {
-                Button("Setup guide") { WelcomeWindow.show() }
-            }
+            Button("Settings…") { SettingsWindow.show(.agents) }.keyboardShortcut(",")
             Spacer()
             Button("Quit") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")

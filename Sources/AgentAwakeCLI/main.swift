@@ -9,6 +9,8 @@ usage:
   agentawake run   <name> [--timeout 30m] -- <cmd...>
                                             begin, heartbeat while <cmd> runs, done; exits with <cmd>'s status
   agentawake list
+  agentawake hook  <agent> <event>          for agent hooks: reads the agent's JSON payload on stdin;
+                                            silent, never fails, always exits 0
 timeout = max silence before the session is declared stuck, pinged and released (0 = never).
 """
 
@@ -37,9 +39,58 @@ func call(_ r: Request) -> Response {
     } catch { fail("agentawake: \(error)") }
 }
 
+/// Reads stdin until EOF or a complete JSON object, for at most `seconds`; nothing when stdin is a terminal.
+/// Keeps draining past `limit` bytes so the agent never blocks writing a large payload, but returns nil then
+/// (a truncated payload is useless).
+func readStdin(seconds: Double, limit: Int = 32 << 20) -> Data? {
+    if isatty(0) != 0 { return Data() }
+    let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(seconds * 1e9)
+    var out = Data()
+    var buf = [UInt8](repeating: 0, count: 65536)
+    while true {
+        let now = DispatchTime.now().uptimeNanoseconds
+        guard now < deadline else { break }
+        var pfd = pollfd(fd: 0, events: Int16(POLLIN), revents: 0)
+        let ready = poll(&pfd, 1, Int32(max(1, (deadline - now) / 1_000_000)))
+        if ready < 0 { if errno == EINTR { continue } else { break } }
+        if ready == 0 { break }   // still open but silent: give up
+        // POLLNVAL (poll doesn't support some devices on macOS): fall through to read, which won't block on them.
+        let n = read(0, &buf, buf.count)
+        if n <= 0 { break }
+        if out.count <= limit {
+            out.append(contentsOf: buf[0..<n])
+            // Some agents may keep stdin open after writing: stop as soon as what we have is a whole object.
+            if out.last(where: { $0 > 32 }) == UInt8(ascii: "}"),
+               (try? JSONSerialization.jsonObject(with: out)) != nil { break }
+        }
+    }
+    return out.count > limit ? nil : out
+}
+
+/// `agentawake hook <agent> <event>`: must never block or alter the agent. Silent, fast, exits 0 whatever happens.
+func runHook(_ a: [String]) -> Never {
+    signal(SIGPIPE, SIG_IGN)
+    signal(SIGALRM) { _ in _exit(0) }   // last resort if the app hangs mid-reply
+    alarm(4)
+    guard a.count >= 2 else { exit(0) }
+    let agent = a[0], event = a[1]
+    if let out = HookAdapter.stdout(agent: agent, event: event) {
+        out.utf8CString.withUnsafeBufferPointer { _ = write(1, $0.baseAddress, $0.count - 1) }
+    }
+    guard var payload = readStdin(seconds: 2) else { exit(0) }
+    if payload.isEmpty, a.count > 2 { payload = Data(a[2].utf8) }   // older Cursor CLIs pass the payload in argv
+    var env = ProcessInfo.processInfo.environment
+    if env["PWD"] == nil { env["PWD"] = FileManager.default.currentDirectoryPath }
+    let requests = HookAdapter.requests(agent: agent, event: event, payload: payload, env: env,
+                                        agentPID: HookAdapter.agentPID(from: getppid()), config: Config.load())
+    for r in requests { _ = try? Client.send(r) }
+    exit(0)
+}
+
 var args = Array(CommandLine.arguments.dropFirst())
 guard let cmd = args.first else { fail(usage, code: 2) }
 args.removeFirst()
+if cmd == "hook" { runHook(args) }
 
 var timeout: Double?
 var message: String?
