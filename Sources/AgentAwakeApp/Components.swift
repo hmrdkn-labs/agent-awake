@@ -97,10 +97,12 @@ struct AgentRow: View {
     @ViewBuilder private var trailing: some View {
         switch row.status {
         case .connected:
+            Pill(text: "Connected", color: .green, systemImage: "checkmark")
+                .contextMenu { Button("Disconnect", role: .destructive) { model.disconnect(row.integration) } }
             Menu {
                 Button("Disconnect", role: .destructive) { model.disconnect(row.integration) }
-            } label: { Pill(text: "Connected", color: .green, systemImage: "checkmark") }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().foregroundStyle(.secondary)
         case .needsAction:
             Button { showNote = true } label: { Pill(text: "One more step", color: .orange, systemImage: "hand.point.up.left.fill") }
                 .buttonStyle(.plain)
