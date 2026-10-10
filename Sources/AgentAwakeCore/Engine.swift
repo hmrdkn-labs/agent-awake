@@ -87,14 +87,14 @@ public final class Engine {
             return Response(ok: true, sessions: store.list())
         case "begin":
             guard let n = r.name, !n.isEmpty else { return Response(ok: false, error: "name required") }
-            store.begin(n, label: r.label, agent: r.agent, pid: r.pid,
+            store.begin(n, label: r.label ?? r.fallbackLabel, agent: r.agent, pid: r.pid,
                         timeout: r.timeout ?? SessionStore.defaultTimeout, now: now())
             changed()
             return Response(ok: true, sessions: store.list())
         case "beat":
             guard let n = r.name, !n.isEmpty else { return Response(ok: false, error: "name required") }
             let updated = store.update(n, now: now()) { s in
-                if let l = r.label { s.label = l }
+                if let l = r.label ?? (s.label == nil ? r.fallbackLabel : nil) { s.label = l }
                 if let a = r.agent { s.agent = a }
                 if let p = r.pid { s.pid = p }
                 if s.state == .waiting {   // the user answered: back to work with the normal timeout
@@ -108,17 +108,17 @@ public final class Engine {
             }
             // A beat that carries its timeout recreates the session, so work survives an app restart.
             guard let t = r.timeout else { return Response(ok: false, error: "no such session") }
-            store.begin(n, label: r.label, agent: r.agent, pid: r.pid, timeout: t, now: now())
+            store.begin(n, label: r.label ?? r.fallbackLabel, agent: r.agent, pid: r.pid, timeout: t, now: now())
             changed()
             return Response(ok: true)
         case "wait":
             guard let n = r.name, !n.isEmpty else { return Response(ok: false, error: "name required") }
             let wasWaiting = store.get(n)?.state == .waiting
             if store.get(n) == nil {
-                store.begin(n, label: r.label, agent: r.agent, pid: r.pid, timeout: Engine.waitGrace, now: now())
+                store.begin(n, label: r.label ?? r.fallbackLabel, agent: r.agent, pid: r.pid, timeout: Engine.waitGrace, now: now())
             }
             store.update(n, now: now()) { s in
-                if let l = r.label { s.label = l }
+                if let l = r.label ?? (s.label == nil ? r.fallbackLabel : nil) { s.label = l }
                 s.state = .waiting
                 s.timeout = Engine.waitGrace
             }

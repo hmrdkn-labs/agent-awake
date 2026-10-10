@@ -10,10 +10,26 @@ final class HookAdapterTests: XCTestCase {
         HookAdapter.requests(agent: agent, event: event, payload: Data(json.utf8), env: env, agentPID: pid, config: config)
     }
 
+    /// Compares everything except `fallbackLabel`, which testSessionsFirstSeenMidStreamGetAFolderTitle covers.
     func check(_ got: [Request], _ want: [Request], file: StaticString = #filePath, line: UInt = #line) {
         let enc = JSONEncoder(); enc.outputFormatting = [.sortedKeys]
-        let s = { (rs: [Request]) in rs.map { String(decoding: try! enc.encode($0), as: UTF8.self) } }
+        let s = { (rs: [Request]) in
+            rs.map { r -> String in var r = r; r.fallbackLabel = nil; return String(decoding: try! enc.encode(r), as: UTF8.self) }
+        }
         XCTAssertEqual(s(got), s(want), file: file, line: line)
+    }
+
+    func testSessionsFirstSeenMidStreamGetAFolderTitle() {
+        config.taskTitles = true
+        let got = run("claude", "PermissionRequest", #"{"session_id":"s","cwd":"/src/shop","tool_name":"Bash","tool_input":{"command":"npm test"}}"#)
+        XCTAssertNil(got.first?.label, "a needs-you never renames a session")
+        XCTAssertEqual(got.first?.fallbackLabel, "Claude Code · shop", "folder only, even with task titles on")
+        let e = Engine(notifier: FakeNotifier(), power: FakePower(), probe: FakeProbe())
+        _ = e.handle(got[0])
+        XCTAssertEqual(e.store.get("claude:s")?.title, "Claude Code · shop")
+        _ = e.handle(Request(cmd: "beat", name: "claude:s", label: "Fix tests", fallbackLabel: "Claude Code · shop"))
+        _ = e.handle(Request(cmd: "beat", name: "claude:s", fallbackLabel: "Claude Code · shop"))
+        XCTAssertEqual(e.store.get("claude:s")?.title, "Fix tests", "the fallback never replaces a real title")
     }
 
     func beat(_ name: String, _ agent: String, label: String? = nil, pid: Int32? = 4242, timeout: Double? = SessionStore.defaultTimeout) -> Request {

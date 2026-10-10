@@ -73,19 +73,22 @@ public enum HookAdapter {
         let label: String? = action == .start || prompt != nil
             ? self.label(prompt: prompt, agentName: owner.name, cwd: cwd, keepExisting: continuation, config: config)
             : nil
+        // Names a session the app first hears about mid-stream (after a restart, or from a needs-you).
+        let fallback = self.label(prompt: nil, agentName: owner.name, cwd: cwd, keepExisting: false,
+                                  config: Config())
 
         switch action {
         case .start:
-            return [Request(cmd: "beat", name: name, label: label, agent: id, pid: agentPID,
+            return [Request(cmd: "beat", name: name, label: label, fallbackLabel: fallback, agent: id, pid: agentPID,
                             timeout: SessionStore.defaultTimeout)]
         case .beat:
             // Auggie and Droid send tool events from subagent sessions we can't tell apart: let those refresh a
             // known session but never create one.
             let creates = !(id == "auggie" || id == "droid")
-            return [Request(cmd: "beat", name: name, label: label, agent: id, pid: agentPID,
+            return [Request(cmd: "beat", name: name, label: label, fallbackLabel: fallback, agent: id, pid: agentPID,
                             timeout: creates ? SessionStore.defaultTimeout : nil)]
         case .needsYou:
-            return [Request(cmd: "wait", name: name, label: label, agent: id, pid: agentPID,
+            return [Request(cmd: "wait", name: name, label: label, fallbackLabel: fallback, agent: id, pid: agentPID,
                             message: needsYouMessage(p, config))]
         case .stop:
             let kind = stopKind(p)

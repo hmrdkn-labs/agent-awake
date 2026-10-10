@@ -13,15 +13,18 @@ import Foundation
 public struct Request: Codable {
     public var cmd: String
     public var name: String?
-    public var label: String?         // human title for the menu and pings; defaults to name
+    public var label: String?         // human title for the menu and pings; replaces the current one
+    public var fallbackLabel: String? // title to use only if the session has none yet (created mid-stream)
     public var agent: String?         // integration id ("claude", "codex", …) for display and dedupe
     public var pid: Int32?            // the agent's process; lets the app tell "busy in a long tool" from "gone"
     public var timeout: Double?       // seconds of allowed silence; nil/0 = never expires
     public var kind: DoneKind?        // for `done`
     public var message: String?       // detail for the ping
-    public init(cmd: String, name: String? = nil, label: String? = nil, agent: String? = nil, pid: Int32? = nil,
+    public init(cmd: String, name: String? = nil, label: String? = nil, fallbackLabel: String? = nil,
+                agent: String? = nil, pid: Int32? = nil,
                 timeout: Double? = nil, kind: DoneKind? = nil, message: String? = nil) {
-        self.cmd = cmd; self.name = name; self.label = label; self.agent = agent; self.pid = pid
+        self.cmd = cmd; self.name = name; self.label = label; self.fallbackLabel = fallbackLabel
+        self.agent = agent; self.pid = pid
         self.timeout = timeout; self.kind = kind; self.message = message
     }
 }
