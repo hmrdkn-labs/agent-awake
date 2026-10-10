@@ -77,11 +77,19 @@ final class Model: ObservableObject {
         engine = e
         lid = LidGuard(controller: XPCSleepController(), notifier: router)
         assertions = AssertionWatcher(engine: e)
-        // "show" comes from a second launch of the app; everything else is session traffic.
+        // "show" comes from a second launch of the app, "settings" from `agentawake settings`;
+        // everything else is session traffic.
         server = SocketServer { [e] req in
-            if req.cmd == "show" {
+            switch req.cmd {
+            case "show":
                 DispatchQueue.main.async { WelcomeWindow.show() }
                 return Response(ok: true)
+            case "settings":
+                let tab: SettingsWindow.Tab = req.name == "notifications" ? .notifications : req.name == "general" ? .general : .agents
+                DispatchQueue.main.async { SettingsWindow.show(tab) }
+                return Response(ok: true)
+            default:
+                break
             }
             return e.handle(req)
         }

@@ -11,6 +11,7 @@ usage:
   agentawake list
   agentawake agents                         supported agents and whether they're connected
   agentawake connect|disconnect <agent>     add or remove Agent Awake's hooks for one agent
+  agentawake settings [agents|notifications|general]   open the Settings window
   agentawake hook  <agent> <event>          for agent hooks: reads the agent's JSON payload on stdin;
                                             silent, never fails, always exits 0
 timeout = max silence before the session is declared stuck, pinged and released (0 = never).
@@ -119,8 +120,11 @@ case "begin", "beat", "done":
 case "list":
     for s in call(Request(cmd: "list")).sessions ?? [] {
         let age = formatDuration(Date().timeIntervalSince1970 - s.startedAt)
-        print("\(s.name)\t\(age)\ttimeout=\(s.timeout == 0 ? "none" : formatDuration(s.timeout))")
+        let state = s.state == .waiting ? "needs you" : "working"
+        print("\(s.name)\t\(age)\t\(state)\ttimeout=\(s.timeout == 0 ? "none" : formatDuration(s.timeout))\t\(s.title)")
     }
+case "settings":
+    _ = call(Request(cmd: "settings", name: positional.first))
 case "agents":
     for i in Integrations.all() {
         let s: String

@@ -43,14 +43,13 @@ public final class Engine {
     public func tick() {
         let t = now()
         var ended = false
+        // An agent that exited (closed terminal, crash, kill) sends no Stop: end its session right away, silently.
+        for s in store.list() where s.pid.map({ !probe.isAlive($0) }) == true {
+            _ = store.done(s.name); ended = true
+        }
         for s in store.overdue(now: t) {
-            if s.name != Engine.manualName, s.state == .working, let pid = s.pid {
-                if !probe.isAlive(pid) {
-                    _ = store.done(s.name); ended = true
-                    continue
-                }
-                if t - s.lastBeat < s.timeout + Engine.busyCap && probe.isBusy(pid, since: s.lastBeat) { continue }
-            }
+            if s.name != Engine.manualName, s.state == .working, let pid = s.pid,
+               t - s.lastBeat < s.timeout + Engine.busyCap && probe.isBusy(pid, since: s.lastBeat) { continue }
             _ = store.done(s.name); ended = true
             if s.name == Engine.manualName || s.state == .waiting { continue }   // already pinged / user's own timer
             notifier.send(Alert(title: "\(s.title) went quiet",

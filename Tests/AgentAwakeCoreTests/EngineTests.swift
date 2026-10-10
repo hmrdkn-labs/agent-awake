@@ -51,11 +51,11 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(n.alerts.map(\.level), [.urgent, .info], "ended is silent, failed is urgent")
     }
 
-    func testQuietAgentWhoseProcessExitedEndsSilently() {
+    func testAgentWhoseProcessExitedEndsAtOnceAndSilently() {
         let (e, p, n) = make()
         _ = e.handle(Request(cmd: "begin", name: "a", pid: 42, timeout: 60))
         probe.alive = false
-        t += 60; e.tick()
+        e.tick()   // long before its timeout
         XCTAssertFalse(p.held); XCTAssertTrue(n.sent.isEmpty)
     }
 
