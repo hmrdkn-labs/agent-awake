@@ -124,8 +124,12 @@ session is alive. Clients talk to it with one JSON line per request over `~/.age
 swift build && swift test
 SIGN_IDENTITY="Developer ID Application: <Name> (<TEAMID>)" scripts/bundle.sh   # dist/Agent Awake.app
 xcrun notarytool store-credentials agent-awake --key <AuthKey.p8> --key-id <id> --issuer <uuid>
-SIGN_IDENTITY=... scripts/notarize.sh      # checks, notarizes app + DMG: dist/AgentAwake-<version>.dmg
+SIGN_IDENTITY=... scripts/release.sh --schedule   # notarize app + DMG, publish the GitHub release
 ```
+
+`release.sh` never waits on Apple: each run moves one step (submit, staple, build the DMG, submit, staple,
+publish) and exits, and `--schedule` runs it every 5 minutes until it's released. Its log is in
+`dist/release-<version>/log`.
 
 `scripts/install-local.sh` updates your installed copy in place and relaunches it. Keep that path: macOS
 ties the Login Items and helper approval to it, so a fresh copy somewhere else asks again.
