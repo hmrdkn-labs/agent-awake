@@ -18,13 +18,15 @@ say() { osascript -e "display notification \"$1\" with title \"smart-work releas
 
 if gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then stop_job; exit 0; fi
 
-STATUS=$(xcrun notarytool info "$ID" --keychain-profile "$PROFILE" | awk '/status:/{print $2}')
+# A transient failure (locked keychain, offline) leaves STATUS empty: just try again next time.
+STATUS=$(xcrun notarytool info "$ID" --keychain-profile "$PROFILE" 2>/dev/null | awk '/status:/{print $2}' || true)
 case "$STATUS" in
   Accepted) ;;
-  "In") echo "$(date '+%F %T') still in progress"; exit 0 ;;
-  *) say "Notarization $STATUS. See: xcrun notarytool log $ID --keychain-profile $PROFILE"
+  Invalid|Rejected)
+     say "Notarization $STATUS. See: xcrun notarytool log $ID --keychain-profile $PROFILE"
      xcrun notarytool log "$ID" --keychain-profile "$PROFILE" || true
      stop_job; exit 1 ;;
+  *) echo "$(date '+%F %T') waiting (status: ${STATUS:-unreadable})"; exit 0 ;;
 esac
 
 xcrun stapler staple "$APP"
