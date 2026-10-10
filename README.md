@@ -11,17 +11,19 @@ Leaving Claude Code, Codex or a long build running and walking away means choosi
 sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Awake holds the Mac awake
 **only while work is actually running**, then lets it sleep and pings your phone.
 
-- **Awake only while agents work.** Each agent or job is a session. While any session is alive the Mac
-  doesn't idle-sleep. When the last one ends, normal sleep comes back by itself.
-- **The screen still dims.** Only system sleep is held, not the display, so an unattended Mac goes dark
-  and saves power while the work continues.
-- **Phone pings.** "Fix login bug done", "build timed out", "blocked: it needs you", sent through
-  [ntfy](https://ntfy.sh) to your iPhone or Android phone. Setup takes a QR scan.
-- **Stuck detection.** A session that goes silent past its timeout is released and you're told.
+- **Works with your agents, one click each.** Agent Awake connects to each agent's own hooks: it knows
+  when a prompt starts, when the turn ends, and when the agent is waiting for you.
+- **Awake only while agents work.** While any agent is working the Mac doesn't idle-sleep. When the
+  last one finishes, normal sleep comes back by itself. The screen still dims.
+- **Pings that matter.** "Fix login bug is done", "Claude Code needs you: Allow Bash?", "stopped with an
+  error". They go to your phone only while you're away from the Mac (idle, locked, lid closed). When
+  you're at the Mac you get a regular Mac notification instead.
+- **Answer from anywhere.** When an agent needs you, the Mac stays awake 15 more minutes so you can
+  reply remotely, then sleeps.
+- **Not fooled by long builds.** A quiet agent that is still running a build or tests keeps the Mac
+  awake. One whose process exited is let go at once, and one that is truly stuck gets you a ping.
 - **Lid closed (optional).** Keep agents running in your bag. A small privileged helper turns this on only
   while work runs, and turns it off if the battery reaches 10%, the Mac gets hot, or the app quits.
-- **Follows [herdr](https://herdr.dev) automatically.** Panes whose agent is working are tracked with
-  their task title. No setup.
 - **Keep awake presets.** 1h, 2h, 4h, or until you turn it off, for when you want plain caffeinate.
 
 ## Install
@@ -30,47 +32,67 @@ Download the DMG from [Releases](https://github.com/hmrdkn-labs/agent-awake/rele
 **Agent Awake** to Applications and open it. It's signed with Developer ID and notarized by Apple.
 Requires macOS 13 or later, on Apple silicon or Intel.
 
-The first launch opens a short setup window: phone pings (scan a QR code), the `agentawake` command,
-and optional lid-closed mode. The app then lives in the menu bar as a moon. If you can't find it,
+The first launch opens a short setup window: connect the agents it found, set up phone pings, and
+optionally turn on lid-closed mode. The app then lives in the menu bar as a moon. If you can't find it,
 open the app again to bring the window back.
 
-## Tell it about your work
+## Supported agents
 
-herdr users need nothing. For everything else, use the `agentawake` command (the app installs it into
-`~/.local/bin`):
+Connect them in **Settings → Agents**, or with `agentawake connect <id>`. Connecting adds Agent Awake's
+hooks next to yours (a backup of the file is kept), and Disconnect removes exactly what it added.
+Hooks never block an agent: they print nothing, exit 0 in milliseconds, and do nothing if the app isn't
+running.
+
+| Agent | id | Start / done | Needs you | Where |
+|---|---|---|---|---|
+| Claude Code (CLI, desktop app, IDE) | `claude` | ✓ | ✓ | `~/.claude/settings.json` |
+| Codex (CLI, ChatGPT app, IDE) | `codex` | ✓ | ✓ | `~/.codex/hooks.json`, trusted once in Codex |
+| Gemini CLI | `gemini` | ✓ | ✓ | extension in `~/.gemini/extensions` |
+| Qwen Code | `qwen` | ✓ | ✓ | `~/.qwen/settings.json` |
+| Factory Droid | `droid` | ✓ | ✓ | `~/.factory/hooks.json` |
+| GitHub Copilot (CLI, VS Code) | `copilot` | ✓ | ✓ | `~/.copilot/hooks/agentawake.json` |
+| Devin Local | `devin` | ✓ | ✓ | `~/.config/devin/config.json` |
+| OpenCode | `opencode` | ✓ | ✓ | plugin in `~/.config/opencode/plugins` |
+| Kilo Code | `kilo` | ✓ | ✓ | plugin in `~/.config/kilo/plugin` |
+| Cursor (IDE, CLI) | `cursor` | ✓ | | `~/.cursor/hooks.json` |
+| Windsurf Cascade | `windsurf` | ✓ | | `~/.codeium/windsurf/hooks.json` |
+| Kiro | `kiro` | ✓ | | `~/.kiro/hooks/agentawake.json` |
+| Goose | `goose` | ✓ | | plugin in `~/.agents/plugins` |
+| Augment (Auggie) | `auggie` | ✓ | | `~/.augment/settings.json` |
+| Junie CLI | `junie` | ✓ | | `~/.junie/config.json` |
+| Amp | `amp` | ✓ | ✓ | plugin in `~/.config/amp/plugins` |
+| oh-my-pi, pi | `omp`, `pi` | ✓ | ✓ | extension in `~/.omp/agent` / `~/.pi/agent` |
+
+Without any setup, Agent Awake also notices [herdr](https://herdr.dev) panes, and oh-my-pi, Codex and
+Zed while they hold the Mac awake for a turn.
+
+Anything else: wrap it, or report from scripts.
 
 ```sh
-agentawake run build -- make all          # wrap a command: begin, heartbeat while it runs, done
-agentawake begin fix-login --timeout 30m  # start a session; timeout = max silence before "stuck"
-agentawake beat  fix-login                # heartbeat, resets the timeout
+agentawake run build -- make all          # session while the command runs; keeps its exit status
+agentawake begin fix-login --timeout 30m  # timeout = max silence before "it may be stuck"
+agentawake beat  fix-login
 agentawake done  fix-login --message "PR ready"
-agentawake list
+agentawake list                           # what's keeping the Mac awake
+agentawake agents                         # which agents are connected
 ```
 
-### Claude Code
+## Pings
 
-Add hooks to `~/.claude/settings.json`, so every prompt starts a session and every stop ends it:
+**Settings → Notifications** chooses when pings go to your phone (when away, always, never) and where:
 
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "agentawake begin claude-$PPID --timeout 30m" }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "agentawake done claude-$PPID" }] }]
-  }
-}
-```
+| Channel | Cost | Phones |
+|---|---|---|
+| [ntfy](https://ntfy.sh) (set up on first run) | free | iPhone, Android |
+| [Bark](https://github.com/Finb/Bark) | free | iPhone |
+| [Pushover](https://pushover.net) | one-time $5 | iPhone, Android |
+| Telegram bot | free | all |
+| Discord or Slack webhook | free | all |
 
-## Phone pings
-
-The app makes a private ntfy topic on first run and shows it as a QR code. Install the ntfy app, scan
-the code, subscribe, then press **Send test ping**. Topics on ntfy.sh are public by name, so keep yours
-secret. To use your own server or topic, edit `~/.agent-awake/config.json`:
-
-```json
-{ "ntfyTopic": "pick-a-long-random-string", "ntfyServer": "https://ntfy.sh" }
-```
-
-The env vars `AGENT_AWAKE_NTFY_TOPIC` and `AGENT_AWAKE_NTFY_SERVER` override it.
+By default pings name only the agent and project folder ("Claude Code · shop is done"). Prompts can
+hold private text and pings pass through these services, so showing the prompt as the title is opt-in.
+Settings live in `~/.agent-awake/config.json` (mode 0600); `AGENT_AWAKE_NTFY_TOPIC` and
+`AGENT_AWAKE_NTFY_SERVER` override ntfy.
 
 ## Lid-closed mode
 

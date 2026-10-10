@@ -49,7 +49,7 @@ public enum HookAdapter {
             guard let parent = parentID ?? sessionID else { return [] }
             let name = "\(id):\(parent)"
             if action == .needsYou {   // a subagent's permission prompt blocks the whole session on the user
-                return [Request(cmd: "wait", name: name, agent: id, pid: agentPID, message: needsYouMessage(p, config))]
+                return [Request(cmd: "wait", name: name, agent: id, pid: agentPID, message: needsYouMessage(p, config, plugin: AgentCatalog.spec(id)?.action(for: "needsYou") == .needsYou))]
             }
             return [Request(cmd: "beat", name: name, agent: id, pid: agentPID, timeout: SessionStore.defaultTimeout)]
         }
@@ -89,7 +89,7 @@ public enum HookAdapter {
                             timeout: creates ? SessionStore.defaultTimeout : nil)]
         case .needsYou:
             return [Request(cmd: "wait", name: name, label: label, fallbackLabel: fallback, agent: id, pid: agentPID,
-                            message: needsYouMessage(p, config))]
+                            message: needsYouMessage(p, config, plugin: AgentCatalog.spec(id)?.action(for: "needsYou") == .needsYou))]
         case .stop:
             let kind = stopKind(p)
             return [Request(cmd: "done", name: name, agent: id, kind: kind,
@@ -179,7 +179,7 @@ public enum HookAdapter {
         return line.map { clip($0, 60) }
     }
 
-    static func needsYouMessage(_ p: Payload, _ config: Config) -> String? {
+    static func needsYouMessage(_ p: Payload, _ config: Config, plugin: Bool = false) -> String? {
         if let tool = p.str("tool_name", "toolName") {
             switch tool {
             case "AskUserQuestion": return "It has a question for you."
@@ -191,7 +191,17 @@ public enum HookAdapter {
             if config.effectiveTaskTitles, let detail = toolDetail(p) { return "Allow \(tool): \(detail)?" }
             return "Allow \(tool)?"
         }
-        return p.str("message", "notification_message").map { clip($0, 120) }
+        guard let message = p.str("message", "notification_message") else { return nil }
+        if config.effectiveTaskTitles { return clip(message, 120) }
+        // Plugins pass the agent's own wording: "Allow bash: <patterns>", "Approve <tool>: <reason>", a permission
+        // title, or the question itself. Agents' native notification text is generic ("Claude needs your
+        // permission to use Bash"). Keep plugin detail out of pings: tool name at most.
+        guard plugin else { return clip(message, 120) }
+        if ["Allow ", "Approve "].contains(where: message.hasPrefix) {
+            let head = message.firstIndex(of: ":").map { String(message[..<$0]) } ?? message
+            return head.hasSuffix("?") ? head : head + "?"
+        }
+        return "It is waiting for your answer."
     }
 
     static func toolDetail(_ p: Payload) -> String? {

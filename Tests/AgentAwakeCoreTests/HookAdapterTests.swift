@@ -392,3 +392,16 @@ final class HookAdapterTests: XCTestCase {
         XCTAssertNotNil(HookAdapter.agentPID(from: getpid()), "a real process resolves")
     }
 }
+
+final class HookAdapterPrivacyTests: XCTestCase {
+    func testPluginNeedsYouDetailStaysOutOfPingsUnlessOptedIn() {
+        let run = { (msg: String, titles: Bool) -> String? in
+            var c = Config(); c.taskTitles = titles
+            let json = try! JSONSerialization.data(withJSONObject: ["session_id": "s", "cwd": "/src/shop", "message": msg])
+            return HookAdapter.requests(agent: "opencode", event: "needsYou", payload: json, env: [:], agentPID: nil, config: c).first?.message
+        }
+        XCTAssertEqual(run("Approve bash: rm -rf secrets", false), "Approve bash?")
+        XCTAssertEqual(run("Which database password should I use?", false), "It is waiting for your answer.")
+        XCTAssertEqual(run("Approve bash: rm -rf secrets", true), "Approve bash: rm -rf secrets")
+    }
+}
