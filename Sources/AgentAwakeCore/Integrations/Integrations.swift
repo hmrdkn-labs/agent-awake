@@ -225,7 +225,7 @@ public enum Integrations {
             let files = [(dir + "/gemini-extension.json", manifest.serialized() + "\n"),
                          (dir + "/hooks/hooks.json", JSONValue.obj([("hooks", hooks)]).serialized() + "\n")]
             return integration(files.map(\.0), note: "Installed as a Gemini CLI extension, so it also works in folders you haven't trusted. Restart Gemini CLI to load it.",
-                               detect: Detection(binaries: ["gemini"], paths: [".gemini/settings.json", ".gemini/trustedFolders.json", ".gemini/tmp"]),
+                               detect: Detection(binaries: ["gemini"], paths: [".gemini/trustedFolders.json", ".gemini/tmp"]),
                                .owned(files, root: dir, stop: h + "/.gemini/extensions"))
 
         case "qwen":
@@ -237,7 +237,7 @@ public enum Integrations {
                 return group(tools.contains(e) ? "*" : nil, handler)
             }
             return integration([path], note: "Restart Qwen Code (or open /hooks) to load the hooks.",
-                               detect: Detection(binaries: ["qwen"], apps: [("Qwen Code.app", nil)], paths: [".qwen"]),
+                               detect: Detection(binaries: ["qwen"], apps: [("Qwen Code.app", nil)], paths: [".qwen/settings.json"]),
                                .shared(file, cleanup: [], trust: nil))
 
         case "droid":
@@ -258,7 +258,7 @@ public enum Integrations {
             else if (try? candidates[2].load())?["hooks"] != nil { chosen = candidates[2] }
             else { chosen = candidates[0] }
             return integration([chosen.path], note: "New Droid sessions pick the hooks up; a running session may ask you to review them in /hooks.",
-                               detect: Detection(binaries: ["droid"], apps: [("Factory.app", nil)], paths: [".factory"]),
+                               detect: Detection(binaries: ["droid"], apps: [("Factory.app", nil)], paths: [".factory/settings.json", ".factory/hooks.json"]),
                                .shared(chosen, cleanup: candidates.filter { $0.path != chosen.path }, trust: nil))
 
         case "auggie":
@@ -267,7 +267,7 @@ public enum Integrations {
                 group(tools.contains(e) ? ".*" : nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5000))])
             }
             return integration([path], note: "Needs Auggie 0.27 or later. Takes effect the next time auggie starts.",
-                               detect: Detection(binaries: ["auggie"], paths: [".augment"]),
+                               detect: Detection(binaries: ["auggie"], paths: [".augment/settings.json"]),
                                .shared(file, cleanup: [], trust: nil))
 
         case "copilot":
@@ -281,7 +281,7 @@ public enum Integrations {
             }
             let content = JSONValue.obj([("version", .int(1)), ("hooks", hooks)]).serialized() + "\n"
             return integration([path], note: "Restart Copilot CLI sessions to load the hooks. VS Code's agent mode reads the same file.",
-                               detect: Detection(binaries: ["copilot"], paths: [".copilot"]),
+                               detect: Detection(binaries: ["copilot"], prefixed: [(".vscode/extensions", "github.copilot-chat")]),
                                .owned([(path, content)], root: nil, stop: h + "/.copilot/hooks"))
 
         case "cursor":
@@ -290,7 +290,7 @@ public enum Integrations {
                 .obj([("command", .string(cmd(e))), ("timeout", .int(5))])
             }
             return integration([path], note: "Cursor has no “needs you” hook, so Agent Awake hears only when work starts and finishes.",
-                               detect: Detection(binaries: ["cursor-agent"], apps: [("Cursor.app", nil)], paths: [".cursor"]),
+                               detect: Detection(binaries: ["cursor-agent"], apps: [("Cursor.app", nil)], paths: [".cursor/cli-config.json"]),
                                .shared(file, cleanup: [], trust: nil))
 
         case "windsurf":
@@ -317,7 +317,7 @@ public enum Integrations {
             }
             let content = JSONValue.obj([("version", .string("v1")), ("hooks", .array(hooks))]).serialized() + "\n"
             return integration([path], note: "Needs Kiro 1.0.182 or later (global hooks).",
-                               detect: Detection(binaries: ["kiro-cli"], apps: [("Kiro.app", nil)], paths: [".kiro"]),
+                               detect: Detection(binaries: ["kiro-cli"], apps: [("Kiro.app", nil)]),
                                .owned([(path, content)], root: nil, stop: h + "/.kiro/hooks"))
 
         case "goose":
@@ -331,7 +331,7 @@ public enum Integrations {
             let files = [(dir + "/plugin.json", manifest.serialized() + "\n"),
                          (dir + "/hooks/hooks.json", JSONValue.obj([("hooks", hooks)]).serialized() + "\n")]
             return integration(files.map(\.0), note: "Restart Goose to load the plugin.",
-                               detect: Detection(binaries: ["goose"], apps: [("Goose.app", nil)], paths: [".config/goose"]),
+                               detect: Detection(binaries: ["goose"], apps: [("Goose.app", nil)], paths: [".config/goose/config.yaml"]),
                                .owned(files, root: dir, stop: h + "/.agents/plugins"))
 
         case "junie":

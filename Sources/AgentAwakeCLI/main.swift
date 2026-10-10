@@ -9,6 +9,8 @@ usage:
   agentawake run   <name> [--timeout 30m] -- <cmd...>
                                             begin, heartbeat while <cmd> runs, done; exits with <cmd>'s status
   agentawake list
+  agentawake agents                         supported agents and whether they're connected
+  agentawake connect|disconnect <agent>     add or remove Agent Awake's hooks for one agent
   agentawake hook  <agent> <event>          for agent hooks: reads the agent's JSON payload on stdin;
                                             silent, never fails, always exits 0
 timeout = max silence before the session is declared stuck, pinged and released (0 = never).
@@ -119,6 +121,26 @@ case "list":
         let age = formatDuration(Date().timeIntervalSince1970 - s.startedAt)
         print("\(s.name)\t\(age)\ttimeout=\(s.timeout == 0 ? "none" : formatDuration(s.timeout))")
     }
+case "agents":
+    for i in Integrations.all() {
+        let s: String
+        switch i.status() {
+        case .notInstalled: s = "not installed"
+        case .available: s = "not connected"
+        case .connected: s = "connected"
+        case .needsAction(let m): s = "needs a step: \(m)"
+        case .broken(let m): s = "broken: \(m)"
+        }
+        print("\(i.id)\t\(i.name)\t\(s)")
+    }
+case "connect", "disconnect":
+    guard let id = positional.first else { fail(usage, code: 2) }
+    guard let i = Integrations.all().first(where: { $0.id == id }) else {
+        fail("agentawake: unknown agent \(id); see `agentawake agents`", code: 2)
+    }
+    do { try cmd == "connect" ? i.connect() : i.disconnect() } catch { fail("agentawake: \(error.localizedDescription)") }
+    if cmd == "connect", case .needsAction(let m) = i.status() { print(m) }
+    for f in i.files { print("\(cmd == "connect" ? "wrote" : "cleaned") \(f)") }
 case "run":
     // The wrapped command always runs and its exit status is ours, whether or not the app is up.
     guard let name = positional.first, !command.isEmpty else { fail(usage, code: 2) }
