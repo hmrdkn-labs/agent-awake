@@ -28,6 +28,7 @@ public final class AssertionWatcher {
     private let engine: Engine
     private let fetch: () -> [Holder]
     private let cwd: (Int32) -> String?
+    private let env: (Int32) -> [String: String]
     private let interval: Double
     private let quietPolls: Int
     private var tracked: [String: Int] = [:]   // session name -> polls without its assertion
@@ -37,8 +38,9 @@ public final class AssertionWatcher {
 
     public init(engine: Engine, interval: Double = 10, quietPolls: Int = 2,
                 fetch: @escaping () -> [Holder] = AssertionWatcher.liveHolders,
-                cwd: @escaping (Int32) -> String? = ProcessList.cwd) {
-        self.engine = engine; self.fetch = fetch; self.cwd = cwd
+                cwd: @escaping (Int32) -> String? = ProcessList.cwd,
+                env: @escaping (Int32) -> [String: String] = ProcessList.environment) {
+        self.engine = engine; self.fetch = fetch; self.cwd = cwd; self.env = env
         self.interval = interval; self.quietPolls = quietPolls
     }
 
@@ -47,6 +49,14 @@ public final class AssertionWatcher {
         get { lock.lock(); defer { lock.unlock() }; return skip }
         set { lock.lock(); skip = newValue; lock.unlock() }
     }
+
+    /// While the herdr watcher runs, agents inside herdr panes are its to report (it knows their task and
+    /// blocked state); we only count the ones outside herdr.
+    public var herdrFollowsPanes: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return herdr }
+        set { lock.lock(); herdr = newValue; lock.unlock() }
+    }
+    private var herdr = false
 
     public func start() {
         let t = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "agentawake.assertions"))
@@ -65,10 +75,12 @@ public final class AssertionWatcher {
     public func poll() {
         let me = ProcessInfo.processInfo.processIdentifier
         var seen: [String: (Rule, Int32)] = [:]
-        lock.lock(); let skipping = skip; lock.unlock()
+        lock.lock(); let skipping = skip, inHerdr = herdr; lock.unlock()
         for h in fetch() where h.pid != me {
             guard let r = Self.rules.first(where: { $0.matches(h) }), !skipping.contains(r.agent) else { continue }
-            seen["\(r.agent):pid\(h.pid)"] = (r, h.pid)
+            let name = "\(r.agent):pid\(h.pid)"
+            if inHerdr, seen[name] == nil, env(h.pid)["HERDR_PANE_ID"] != nil { continue }
+            seen[name] = (r, h.pid)
         }
         lock.lock(); defer { lock.unlock() }
         for (name, (rule, pid)) in seen {

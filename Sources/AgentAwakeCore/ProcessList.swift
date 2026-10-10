@@ -37,6 +37,25 @@ public enum ProcessList {
         return path.isEmpty ? nil : path
     }
 
+    /// Environment variables of a process the user owns (KERN_PROCARGS2: argc, exec path, argv, env).
+    public static func environment(_ pid: pid_t) -> [String: String] {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 0
+        guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return [:] }
+        var buf = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 3, &buf, &size, nil, 0) == 0 else { return [:] }
+        let argc = buf.withUnsafeBytes { Int($0.load(as: Int32.self)) }
+        // NUL-separated strings after argc; skip the exec path, padding NULs, then argc args.
+        let strings = buf[MemoryLayout<Int32>.size..<size].split(separator: 0, omittingEmptySubsequences: true)
+            .map { String(decoding: $0, as: UTF8.self) }
+        var env: [String: String] = [:]
+        for s in strings.dropFirst(1 + argc) {
+            guard let eq = s.firstIndex(of: "=") else { continue }
+            env[String(s[..<eq])] = String(s[s.index(after: eq)...])
+        }
+        return env
+    }
+
     public static func isAlive(_ pid: pid_t) -> Bool {
         kill(pid, 0) == 0 || errno == EPERM
     }

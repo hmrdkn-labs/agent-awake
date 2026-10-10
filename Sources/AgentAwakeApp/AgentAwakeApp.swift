@@ -112,6 +112,7 @@ final class Model: ObservableObject {
 
     private func applyHerdr() {
         herdr?.stop(); herdr = nil
+        assertions.herdrFollowsPanes = herdrWatch && herdrPath != nil
         guard herdrWatch, let path = herdrPath else { return }
         let w = HerdrWatcher(engine: engine) { HerdrCLI.listAgents(herdr: path) }
         w.skipAgents = hookedAgents

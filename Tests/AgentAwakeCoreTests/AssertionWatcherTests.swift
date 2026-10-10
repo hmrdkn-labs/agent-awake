@@ -39,3 +39,18 @@ final class AssertionWatcherTests: XCTestCase {
         XCTAssertFalse(p.held)
     }
 }
+
+final class AssertionWatcherHerdrTests: XCTestCase {
+    func testAgentsInsideHerdrPanesAreLeftToHerdrOnlyWhileItWatches() {
+        let p = FakePower()
+        let e = Engine(notifier: FakeNotifier(), power: p, probe: FakeProbe())
+        let holder = AssertionWatcher.Holder(pid: 7, process: "omp", name: "omp agent session", type: "PreventUserIdleSystemSleep")
+        let w = AssertionWatcher(engine: e, fetch: { [holder] }, cwd: { _ in nil }, env: { _ in ["HERDR_PANE_ID": "wE:p1"] })
+        w.herdrFollowsPanes = true
+        w.poll()
+        XCTAssertFalse(p.held, "herdr reports this one")
+        w.herdrFollowsPanes = false
+        w.poll()
+        XCTAssertTrue(p.held, "herdr off: the assertion is the only signal")
+    }
+}
