@@ -9,6 +9,7 @@ PROFILE="${NOTARY_PROFILE:-smart-work}"
 APP=dist/SmartWork.app
 DMG="dist/smart-work-$VERSION.dmg"
 
+scripts/preflight.sh
 ditto -c -k --keepParent "$APP" dist/SmartWork.zip
 xcrun notarytool submit dist/SmartWork.zip --keychain-profile "$PROFILE" --wait
 xcrun stapler staple "$APP"
