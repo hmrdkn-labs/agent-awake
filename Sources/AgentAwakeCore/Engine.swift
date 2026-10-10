@@ -38,13 +38,18 @@ public final class Engine {
         changed()
         let idle = store.list().isEmpty
         for s in expired where s.name != Engine.manualName {
-            notifier.send(title: "smart-work: \(s.name) timed out",
+            notifier.send(title: "Agent Awake: \(s.title) timed out",
                           body: "No heartbeat for \(formatDuration(s.timeout)). Check on it." + (idle ? " No sessions left; Mac can sleep." : ""))
         }
     }
 
-    public func setManual(_ on: Bool) {
-        if on { store.begin(Engine.manualName, timeout: 0, now: now()) } else { _ = store.done(Engine.manualName) }
+    /// Manual "Keep awake": nil = off, 0 = until turned off, otherwise for that many seconds.
+    public func setManual(duration: Double?) {
+        if let d = duration {
+            store.begin(Engine.manualName, label: "Keep awake", timeout: d, now: now())
+        } else {
+            _ = store.done(Engine.manualName)
+        }
         changed()
     }
 
@@ -60,17 +65,20 @@ public final class Engine {
             return Response(ok: true, sessions: store.list())
         case "begin":
             guard let n = r.name, !n.isEmpty else { return Response(ok: false, error: "name required") }
-            store.begin(n, timeout: r.timeout ?? SessionStore.defaultTimeout, now: now())
+            store.begin(n, label: r.label, timeout: r.timeout ?? SessionStore.defaultTimeout, now: now())
             changed()
             return Response(ok: true, sessions: store.list())
         case "beat":
-            guard let n = r.name, store.beat(n, now: now()) else { return Response(ok: false, error: "no such session") }
+            guard let n = r.name, let relabeled = store.beat(n, label: r.label, now: now()) else {
+                return Response(ok: false, error: "no such session")
+            }
+            if relabeled { changed() }
             return Response(ok: true)
         case "done":
             guard let n = r.name, let s = store.done(n) else { return Response(ok: false, error: "no such session") }
             changed()
             let idle = store.list().isEmpty
-            notifier.send(title: "smart-work: \(s.name) done",
+            notifier.send(title: "Agent Awake: \(s.title) done",
                           body: (r.message ?? "Finished after \(formatDuration(now() - s.startedAt)).") + (idle ? " No sessions left; Mac can sleep." : ""))
             return Response(ok: true, sessions: store.list())
         default:

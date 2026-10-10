@@ -1,5 +1,5 @@
 import XCTest
-@testable import SmartWorkCore
+@testable import AgentAwakeCore
 
 final class FakeRunner: SleepSettingRunner {
     var calls: [Bool] = []

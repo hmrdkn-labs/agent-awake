@@ -4,6 +4,7 @@ public struct AgentSnapshot: Equatable {
     public var paneID: String
     public var agent: String
     public var status: String      // working | idle | blocked | done (herdr's vocabulary)
+    public var label: String       // what the user sees: the pane's task title, else its folder, else the agent
 }
 
 public enum HerdrCLI {
@@ -34,8 +35,23 @@ public enum HerdrCLI {
               let agents = result["agents"] as? [[String: Any]] else { return nil }
         return agents.compactMap {
             guard let id = $0["pane_id"] as? String, let st = $0["agent_status"] as? String else { return nil }
-            return AgentSnapshot(paneID: id, agent: ($0["agent"] as? String) ?? "agent", status: st)
+            let agent = ($0["agent"] as? String) ?? "agent"
+            let title = ($0["terminal_title_stripped"] as? String) ?? ($0["terminal_title"] as? String)
+            return AgentSnapshot(paneID: id, agent: agent, status: st,
+                                 label: label(title: title, cwd: $0["cwd"] as? String, agent: agent))
         }
+    }
+
+    /// Agents set the terminal title to their task behind a short prompt and a status marker
+    /// ("π > Fix login" when idle, "π ⁝ Fix login" while busy). Drop that prefix.
+    static func label(title: String?, cwd: String?, agent: String) -> String {
+        var t = (title ?? "").trimmingCharacters(in: .whitespaces)
+        if let r = t.range(of: #"^\S{1,2}\s+[^\p{L}\p{N}\s]{1,2}\s+"#, options: .regularExpression) {
+            t = String(t[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+        }
+        if !t.isEmpty { return t }
+        if let c = cwd, !c.isEmpty { return "\(agent) · \((c as NSString).lastPathComponent)" }
+        return agent
     }
 }
 
@@ -58,7 +74,7 @@ public final class HerdrWatcher {
     private let interval: Double
 
     public func start() {
-        let t = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "smart-work.herdr"))
+        let t = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "agentawake.herdr"))
         t.schedule(deadline: .now(), repeating: interval)
         t.setEventHandler { [weak self] in self?.poll() }
         t.resume()
@@ -78,11 +94,11 @@ public final class HerdrWatcher {
         for a in agents where a.status == "working" {
             if var t = tracked[a.paneID] {
                 t.quiet = 0; t.last = a.status; tracked[a.paneID] = t
-                _ = engine.handle(Request(cmd: "beat", name: t.name))
+                _ = engine.handle(Request(cmd: "beat", name: t.name, label: a.label))
             } else {
                 let name = "\(a.agent) \(a.paneID)"
                 tracked[a.paneID] = (name, 0, a.status)
-                _ = engine.handle(Request(cmd: "begin", name: name, timeout: sessionTimeout))
+                _ = engine.handle(Request(cmd: "begin", name: name, label: a.label, timeout: sessionTimeout))
             }
         }
         for (pane, t) in tracked where byPane[pane]?.status != "working" {

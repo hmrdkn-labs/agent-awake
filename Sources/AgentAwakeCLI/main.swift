@@ -1,14 +1,14 @@
 import Foundation
-import SmartWorkCore
+import AgentAwakeCore
 
 let usage = """
 usage:
-  smart-work begin <name> [--timeout 30m]   start a session (holds the Mac awake)
-  smart-work beat  <name>                   heartbeat; resets the timeout
-  smart-work done  <name> [--message text]  finish; notifies your phone
-  smart-work run   <name> [--timeout 30m] -- <cmd...>
+  agentawake begin <name> [--timeout 30m]   start a session (holds the Mac awake)
+  agentawake beat  <name>                   heartbeat; resets the timeout
+  agentawake done  <name> [--message text]  finish; notifies your phone
+  agentawake run   <name> [--timeout 30m] -- <cmd...>
                                             begin, heartbeat while <cmd> runs, done; exits with <cmd>'s status
-  smart-work list
+  agentawake list
 timeout = max silence before the session is declared stuck, pinged and released (0 = never).
 """
 
@@ -32,9 +32,9 @@ func parseDuration(_ s: String) -> Double? {
 func call(_ r: Request) -> Response {
     do {
         let resp = try Client.send(r)
-        if !resp.ok { fail("smart-work: \(resp.error ?? "failed")") }
+        if !resp.ok { fail("agentawake: \(resp.error ?? "failed")") }
         return resp
-    } catch { fail("smart-work: \(error)") }
+    } catch { fail("agentawake: \(error)") }
 }
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -74,7 +74,7 @@ case "run":
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
     p.arguments = command
-    do { try p.run() } catch { _ = call(Request(cmd: "done", name: name)); fail("smart-work: \(error)") }
+    do { try p.run() } catch { _ = call(Request(cmd: "done", name: name)); fail("agentawake: \(error)") }
     // Heartbeat at a third of the timeout (default 30m -> 10m), at most every 30s.
     let period = min(30, max(1, (timeout ?? SessionStore.defaultTimeout) / 3))
     let t = DispatchSource.makeTimerSource(queue: .global())

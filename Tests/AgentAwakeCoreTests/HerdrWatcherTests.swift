@@ -1,11 +1,12 @@
 import XCTest
-@testable import SmartWorkCore
+@testable import AgentAwakeCore
 
 final class HerdrWatcherTests: XCTestCase {
     var status = "working"
     var present = true
+    var title = "π > Fix login bug"
     func json() -> Data {
-        let agents = present ? "[{\"agent\":\"omp\",\"pane_id\":\"w1:p1\",\"agent_status\":\"\(status)\"}]" : "[]"
+        let agents = present ? "[{\"agent\":\"omp\",\"pane_id\":\"w1:p1\",\"agent_status\":\"\(status)\",\"cwd\":\"/src/shop\",\"terminal_title_stripped\":\"\(title)\"}]" : "[]"
         return Data("{\"result\":{\"agents\":\(agents)}}".utf8)
     }
     func make() -> (HerdrWatcher, Engine, FakePower, FakeNotifier) {
@@ -22,6 +23,15 @@ final class HerdrWatcherTests: XCTestCase {
         w.poll(); XCTAssertFalse(p.held)
         XCTAssertEqual(n.sent.count, 1)
         XCTAssertTrue(n.sent[0].1.contains("Finished."))
+        XCTAssertEqual(n.sent[0].0, "Agent Awake: Fix login bug done", "ping names the task, not the pane id")
+    }
+
+    func testRetitledPaneUpdatesLabelAndUntitledFallsBackToFolder() {
+        let (w, e, _, _) = make()
+        w.poll(); title = "π ⁝ Write tests"; w.poll()
+        XCTAssertEqual(e.store.list().first?.title, "Write tests")
+        XCTAssertEqual(HerdrCLI.label(title: "", cwd: "/src/shop", agent: "omp"), "omp · shop")
+        XCTAssertEqual(HerdrCLI.label(title: "make -j8 > build.log", cwd: nil, agent: "omp"), "make -j8 > build.log")
     }
 
     func testFlickerBackToWorkingCancelsFinish() {

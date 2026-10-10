@@ -10,8 +10,8 @@ public struct Config: Codable {
 
     public static func load() -> Config {
         var c = readFile()
-        if let t = ProcessInfo.processInfo.environment["SMART_WORK_NTFY_TOPIC"] { c.ntfyTopic = t }
-        if let s = ProcessInfo.processInfo.environment["SMART_WORK_NTFY_SERVER"] { c.ntfyServer = s }
+        if let t = ProcessInfo.processInfo.environment["AGENT_AWAKE_NTFY_TOPIC"] { c.ntfyTopic = t }
+        if let s = ProcessInfo.processInfo.environment["AGENT_AWAKE_NTFY_SERVER"] { c.ntfyServer = s }
         return c
     }
     private static func readFile() -> Config {
@@ -21,9 +21,9 @@ public struct Config: Codable {
     /// First run: invent an unguessable topic and persist it, so phone setup is just "subscribe to this".
     public static func loadEnsuringTopic() -> Config {
         var file = readFile()
-        if (file.ntfyTopic ?? "").isEmpty, ProcessInfo.processInfo.environment["SMART_WORK_NTFY_TOPIC"] == nil {
+        if (file.ntfyTopic ?? "").isEmpty, ProcessInfo.processInfo.environment["AGENT_AWAKE_NTFY_TOPIC"] == nil {
             let chars = Array("abcdefghijklmnopqrstuvwxyz0123456789")
-            file.ntfyTopic = "smart-work-" + String((0..<16).map { _ in chars.randomElement()! })
+            file.ntfyTopic = "agent-awake-" + String((0..<16).map { _ in chars.randomElement()! })
             try? file.save()
         }
         return load()
@@ -47,7 +47,7 @@ public struct NtfyNotifier: Notifier {
 
     public func send(title: String, body: String) {
         guard let topic = config.ntfyTopic, !topic.isEmpty else {
-            FileHandle.standardError.write(Data("[smart-work] \(title): \(body) (no ntfy topic configured)\n".utf8))
+            FileHandle.standardError.write(Data("[agentawake] \(title): \(body) (no ntfy topic configured)\n".utf8))
             return
         }
         let server = (config.ntfyServer ?? "https://ntfy.sh").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -59,9 +59,9 @@ public struct NtfyNotifier: Notifier {
         req.setValue(title.unicodeScalars.filter { $0.isASCII }.map(String.init).joined(), forHTTPHeaderField: "Title")
         URLSession.shared.dataTask(with: req) { _, resp, err in
             if let err = err {
-                FileHandle.standardError.write(Data("[smart-work] ntfy failed: \(err.localizedDescription)\n".utf8))
+                FileHandle.standardError.write(Data("[agentawake] ntfy failed: \(err.localizedDescription)\n".utf8))
             } else if let h = resp as? HTTPURLResponse, !(200..<300).contains(h.statusCode) {
-                FileHandle.standardError.write(Data("[smart-work] ntfy HTTP \(h.statusCode)\n".utf8))
+                FileHandle.standardError.write(Data("[agentawake] ntfy HTTP \(h.statusCode)\n".utf8))
             }
         }.resume()
     }

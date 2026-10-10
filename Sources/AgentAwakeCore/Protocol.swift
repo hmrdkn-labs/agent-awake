@@ -2,20 +2,25 @@ import Foundation
 
 /// One line of JSON per request, one line per response, over a Unix socket.
 public struct Request: Codable {
-    public var cmd: String            // begin | beat | done | list
+    public var cmd: String            // begin | beat | done | list | show
     public var name: String?
+    public var label: String?         // human title for the menu and pings (begin/beat); defaults to name
     public var timeout: Double?       // seconds of allowed silence; nil/0 = never expires
     public var message: String?       // optional text for the `done` ping
-    public init(cmd: String, name: String? = nil, timeout: Double? = nil, message: String? = nil) {
-        self.cmd = cmd; self.name = name; self.timeout = timeout; self.message = message
+    public init(cmd: String, name: String? = nil, label: String? = nil, timeout: Double? = nil, message: String? = nil) {
+        self.cmd = cmd; self.name = name; self.label = label; self.timeout = timeout; self.message = message
     }
 }
 
 public struct SessionInfo: Codable, Equatable {
     public var name: String
+    public var label: String?
     public var startedAt: Double
     public var lastBeat: Double
     public var timeout: Double        // 0 = never expires
+    public var title: String { label ?? name }
+    /// When the session expires if it stays silent; nil = never.
+    public var expiresAt: Double? { timeout > 0 ? lastBeat + timeout : nil }
 }
 
 public struct Response: Codable {
@@ -28,7 +33,7 @@ public struct Response: Codable {
 }
 
 public enum Paths {
-    public static var dir: String { NSHomeDirectory() + "/.smart-work" }
+    public static var dir: String { NSHomeDirectory() + "/.agent-awake" }
     public static var socket: String { dir + "/daemon.sock" }
     public static var config: String { dir + "/config.json" }
 }

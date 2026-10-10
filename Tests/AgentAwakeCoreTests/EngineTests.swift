@@ -1,5 +1,5 @@
 import XCTest
-@testable import SmartWorkCore
+@testable import AgentAwakeCore
 
 final class FakePower: PowerHolding { var held = false; func setHeld(_ h: Bool) { held = h } }
 final class FakeNotifier: Notifier {
@@ -39,12 +39,21 @@ final class EngineTests: XCTestCase {
         XCTAssertTrue(n.sent[0].0.contains("timed out"))
     }
 
-    func testManualNeverExpiresAndIsSilent() {
+    func testManualUntilOffNeverExpiresAndIsSilent() {
         let (e, p, n) = make()
-        e.setManual(true)
+        e.setManual(duration: 0)
         t += 100_000; e.tick()
         XCTAssertTrue(p.held)
-        e.setManual(false)
+        e.setManual(duration: nil)
+        XCTAssertFalse(p.held); XCTAssertTrue(n.sent.isEmpty)
+    }
+
+    func testTimedManualEndsByItselfWithoutPing() {
+        let (e, p, n) = make()
+        e.setManual(duration: 3600)
+        t += 3599; e.tick()
+        XCTAssertTrue(p.held)
+        t += 1; e.tick()
         XCTAssertFalse(p.held); XCTAssertTrue(n.sent.isEmpty)
     }
 

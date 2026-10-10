@@ -1,15 +1,14 @@
 import SwiftUI
 import ServiceManagement
-import SmartWorkCore
+import AgentAwakeCore
 
 @MainActor
 final class Model: ObservableObject {
+    static let shared = Model()
+
     @Published var sessions: [SessionInfo] = []
     @Published var error: String?
     @Published var helper: HelperState = HelperInstaller.state()
-    @Published var manual = false {
-        didSet { if manual != oldValue { engine.setManual(manual) } }
-    }
     /// "Stay awake with the lid closed" (needs the privileged helper).
     @Published var lidMode = UserDefaults.standard.bool(forKey: "lidMode") {
         didSet {
@@ -42,6 +41,7 @@ final class Model: ObservableObject {
     @Published var cliInstalled = CLIInstaller.isInstalled
 
     let topic: String
+    let ntfyServer: String
     let herdrPath: String? = HerdrCLI.locate()
     let engine: Engine
     private let notifier: Notifier
@@ -50,25 +50,37 @@ final class Model: ObservableObject {
     private var herdr: HerdrWatcher?
     private var poll: Timer?
 
-    init() {
+    var agents: [SessionInfo] { sessions.filter { $0.name != Engine.manualName } }
+    var manual: SessionInfo? { sessions.first { $0.name == Engine.manualName } }
+
+    private init() {
         let config = Config.loadEnsuringTopic()
         topic = config.ntfyTopic ?? ""
+        ntfyServer = (config.ntfyServer ?? "https://ntfy.sh").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let n = NtfyNotifier(config: config)
         notifier = n
         let e = Engine(notifier: n)
         engine = e
         lid = LidGuard(controller: XPCSleepController(), notifier: n)
-        server = SocketServer { [e] in e.handle($0) }
+        // "show" comes from a second launch of the app; everything else is session traffic.
+        server = SocketServer { [e] req in
+            if req.cmd == "show" {
+                DispatchQueue.main.async { WelcomeWindow.show() }
+                return Response(ok: true)
+            }
+            return e.handle(req)
+        }
         e.onChange = { [weak self] list in
             DispatchQueue.main.async { self?.apply(list) }
         }
         do { try server.start(); e.start() } catch SocketError.alreadyRunning {
-            FileHandle.standardError.write(Data("smart-work is already running\n".utf8))
-            exit(1)
+            // Another copy is running: bring up its window instead of starting a second daemon.
+            _ = try? Client.send(Request(cmd: "show"))
+            exit(0)
         } catch { self.error = "\(error)" }
         lid.start()
         if lidMode && helper != .ready && helper != .needsApproval { helper = HelperInstaller.register() }
-        FileHandle.standardError.write(Data("[smart-work] helper: \(helper.label)\n".utf8))
+        FileHandle.standardError.write(Data("[agentawake] helper: \(helper.label)\n".utf8))
         applyHerdr()
         // Helper approval happens in System Settings; notice it without a relaunch.
         poll = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
@@ -89,13 +101,16 @@ final class Model: ObservableObject {
         let s = HelperInstaller.state()
         if s != helper {
             helper = s
-            FileHandle.standardError.write(Data("[smart-work] helper: \(s.label)\n".utf8))
+            FileHandle.standardError.write(Data("[agentawake] helper: \(s.label)\n".utf8))
         }
         if s == .ready { syncLid() }
     }
 
+    /// nil = off, 0 = until turned off, otherwise seconds.
+    func keepAwake(_ duration: Double?) { engine.setManual(duration: duration) }
+
     func testPing() {
-        notifier.send(title: "smart-work", body: "Test ping. Your phone is set up.")
+        notifier.send(title: "Agent Awake", body: "Test ping. Your phone is set up.")
     }
 
     func copyTopic() {
@@ -109,8 +124,6 @@ final class Model: ObservableObject {
 
     private func apply(_ list: [SessionInfo]) {
         sessions = list
-        let m = list.contains { $0.name == Engine.manualName }
-        if m != manual { manual = m }
         syncLid()
     }
 
@@ -122,8 +135,8 @@ final class Model: ObservableObject {
 
 /// Symlinks the bundled CLI into ~/.local/bin (no admin rights needed).
 enum CLIInstaller {
-    static var target: String { NSHomeDirectory() + "/.local/bin/smart-work" }
-    static var source: String { Bundle.main.bundlePath + "/Contents/MacOS/smart-work" }
+    static var target: String { NSHomeDirectory() + "/.local/bin/agentawake" }
+    static var source: String { Bundle.main.bundlePath + "/Contents/MacOS/agentawake" }
     static var canInstall: Bool { Bundle.main.bundlePath.hasSuffix(".app") }
     static var isInstalled: Bool {
         (try? FileManager.default.destinationOfSymbolicLink(atPath: target)) == source
@@ -136,56 +149,34 @@ enum CLIInstaller {
     }
 }
 
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if !UserDefaults.standard.bool(forKey: "welcomed") { WelcomeWindow.show() }
+    }
+
+    /// Opening the app again (Finder, Spotlight, Dock) shows the welcome window, since a menu bar
+    /// icon can be hidden behind the notch.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        WelcomeWindow.show()
+        return false
+    }
+}
+
 @main
-struct SmartWorkApp: App {
-    @StateObject private var model = Model()
+struct AgentAwakeApp: App {
+    @NSApplicationDelegateAdaptor private var delegate: AppDelegate
+    @ObservedObject private var model = Model.shared
 
     init() { NSApplication.shared.setActivationPolicy(.accessory) }
 
     var body: some Scene {
         MenuBarExtra {
-            if let e = model.error { Text(e) }
-
-            let agents = model.sessions.filter { $0.name != Engine.manualName }
-            if agents.isEmpty {
-                Text(model.manual ? "Keeping awake" : "Idle: Mac sleeps normally")
-            } else {
-                ForEach(agents, id: \.name) { s in
-                    Text("\(s.name) · \(Text(Date(timeIntervalSince1970: s.startedAt), style: .relative))")
-                }
-            }
-            Divider()
-
-            Toggle("Keep awake", isOn: $model.manual)
-            Toggle("Stay awake with lid closed", isOn: $model.lidMode)
-            if model.lidMode {
-                Text(model.helper.label)
-                if model.helper == .needsApproval {
-                    Button("Open Login Items…") { HelperInstaller.openSettings() }
-                }
-            }
-            if model.herdrPath != nil {
-                Toggle("Follow herdr agents", isOn: $model.herdrWatch)
-            }
-            Divider()
-
-            Menu("Phone notifications") {
-                Text("ntfy topic: \(model.topic)")
-                Button("Copy topic") { model.copyTopic() }
-                Button("Send test ping") { model.testPing() }
-            }
-            if CLIInstaller.canInstall {
-                if model.cliInstalled {
-                    Text("Command: ~/.local/bin/smart-work")
-                } else {
-                    Button("Install smart-work command") { model.installCLI() }
-                }
-            }
-            Toggle("Launch at login", isOn: $model.launchAtLogin)
-            Divider()
-            Button("Quit smart-work") { NSApplication.shared.terminate(nil) }
+            PanelView(model: model)
         } label: {
-            Image(systemName: model.sessions.isEmpty ? "moon.zzz" : "bolt.fill")
+            let n = model.agents.count
+            Image(nsImage: StatusIcon.image(awake: !model.sessions.isEmpty))
+            if n > 1 { Text("\(n)") }
         }
+        .menuBarExtraStyle(.window)
     }
 }

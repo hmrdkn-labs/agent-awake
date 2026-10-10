@@ -1,11 +1,11 @@
 import Foundation
 import Security
-import SmartWorkCore
+import AgentAwakeCore
 
 // Privileged helper (root LaunchDaemon, registered through SMAppService).
 // Exposes one capability over XPC: a short, renewable "stay awake with lid closed" lease.
 
-func log(_ s: String) { FileHandle.standardError.write(Data("[smart-work-helper] \(s)\n".utf8)) }
+func log(_ s: String) { FileHandle.standardError.write(Data("[agentawake-helper] \(s)\n".utf8)) }
 
 func ownTeamID() -> String? {
     var code: SecCode?

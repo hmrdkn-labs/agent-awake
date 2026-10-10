@@ -1,6 +1,6 @@
 import Foundation
 import ServiceManagement
-import SmartWorkCore
+import AgentAwakeCore
 
 enum HelperState: Equatable {
     case notInstalled, needsApproval, ready, unavailable(String)

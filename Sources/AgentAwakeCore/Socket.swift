@@ -5,8 +5,8 @@ public enum SocketError: Error, CustomStringConvertible {
     public var description: String {
         switch self {
         case .sys(let s): return s
-        case .alreadyRunning: return "smart-work is already running"
-        case .notRunning: return "smart-work app is not running (no daemon at \(Paths.socket))"
+        case .alreadyRunning: return "Agent Awake is already running"
+        case .notRunning: return "Agent Awake is not running (no daemon at \(Paths.socket))"
         }
     }
 }

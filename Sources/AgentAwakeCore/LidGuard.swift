@@ -49,7 +49,7 @@ public final class LidGuard {
             self.denied = true
             self.lock.unlock()
             if first {
-                self.notifier.send(title: "smart-work: lid-closed mode off",
+                self.notifier.send(title: "Agent Awake: lid-closed mode off",
                                    body: "The Mac will sleep when the lid closes: \(reason ?? "helper unavailable").")
             }
         }

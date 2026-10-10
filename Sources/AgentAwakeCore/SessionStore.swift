@@ -8,17 +8,21 @@ public final class SessionStore {
 
     public init() {}
 
-    public func begin(_ name: String, timeout: Double, now: Double) {
+    public func begin(_ name: String, label: String? = nil, timeout: Double, now: Double) {
         lock.lock(); defer { lock.unlock() }
-        sessions[name] = SessionInfo(name: name, startedAt: now, lastBeat: now, timeout: max(0, timeout))
+        sessions[name] = SessionInfo(name: name, label: label, startedAt: now, lastBeat: now, timeout: max(0, timeout))
     }
 
-    @discardableResult
-    public func beat(_ name: String, now: Double) -> Bool {
+    /// Heartbeat; a non-nil label replaces the old one. Returns nil if there is no such session,
+    /// otherwise whether the label changed.
+    public func beat(_ name: String, label: String? = nil, now: Double) -> Bool? {
         lock.lock(); defer { lock.unlock() }
-        guard sessions[name] != nil else { return false }
-        sessions[name]!.lastBeat = now
-        return true
+        guard var s = sessions[name] else { return nil }
+        s.lastBeat = now
+        let relabeled = label != nil && label != s.label
+        if relabeled { s.label = label }
+        sessions[name] = s
+        return relabeled
     }
 
     public func done(_ name: String) -> SessionInfo? {

@@ -18,7 +18,7 @@ public final class PowerAssertion: PowerHolding {
             let r = IOPMAssertionCreateWithName(
                 kIOPMAssertPreventUserIdleSystemSleep as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                "smart-work: agent session running" as CFString, &id)
+                "Agent Awake: agent session running" as CFString, &id)
             held = (r == kIOReturnSuccess)
         } else {
             IOPMAssertionRelease(id)

@@ -2,13 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key><string>com.hamardikan.smart-work.helper</string>
-    <key>BundleProgram</key><string>Contents/MacOS/smart-work-helper</string>
+    <key>Label</key><string>com.hamardikan.agent-awake.helper</string>
+    <key>BundleProgram</key><string>Contents/MacOS/agentawake-helper</string>
     <key>MachServices</key>
-    <dict><key>com.hamardikan.smart-work.helper</key><true/></dict>
+    <dict><key>com.hamardikan.agent-awake.helper</key><true/></dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
     <key>AssociatedBundleIdentifiers</key>
-    <array><string>com.hamardikan.smart-work</string></array>
+    <array><string>com.hamardikan.agent-awake</string></array>
 </dict>
 </plist>
