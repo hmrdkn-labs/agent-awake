@@ -165,12 +165,29 @@ final class Model: ObservableObject {
     /// nil = off, 0 = until turned off, otherwise seconds.
     func keepAwake(_ duration: Double?) { engine.setManual(duration: duration) }
 
-    /// Straight to the phone (or one channel), whether or not the user is at the Mac.
-    func testPing(channel: String? = nil) {
+    /// Straight to the phone (or one channel), whether or not the user is at the Mac. `result` gets the
+    /// outcome on the main thread, so the UI can say "Sent" or why it failed.
+    func testPing(channel: String? = nil, result: ((PingResult) -> Void)? = nil) {
         let alert = Alert(title: "Agent Awake", body: "Test ping. This channel works.")
         let targets = Channels.phone(config).filter { channel == nil || $0.name == channel }
-        if targets.isEmpty { local.send(alert) }
-        targets.forEach { $0.notifier.send(alert) }
+        guard !targets.isEmpty else {
+            local.send(alert)
+            result?(.failed("Set this channel up first"))
+            return
+        }
+        result?(.sending)
+        for t in targets {
+            guard let http = t.notifier as? HTTPChannel else { t.notifier.send(alert); result?(.sent); continue }
+            http.send(alert, via: .shared) { status in
+                DispatchQueue.main.async {
+                    switch status {
+                    case .some(200..<300): result?(.sent)
+                    case .some(let s): result?(.failed("\(t.name) answered HTTP \(s)"))
+                    case .none: result?(.failed("Couldn't reach \(t.name)"))
+                    }
+                }
+            }
+        }
     }
 
     func copyTopic() {

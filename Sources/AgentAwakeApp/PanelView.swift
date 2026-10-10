@@ -88,7 +88,12 @@ struct PanelView: View {
                 Text("WORKING").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 ForEach(model.agents, id: \.name) { s in
                     HStack(spacing: 8) {
-                        Circle().fill(s.state == .waiting ? Color.orange : Color.green).frame(width: 7, height: 7)
+                        AgentIcon(id: s.agent ?? "", size: 20)
+                            .overlay(alignment: .bottomTrailing) {
+                                Circle().fill(s.state == .waiting ? Color.orange : Color.green).frame(width: 8, height: 8)
+                                    .overlay(Circle().stroke(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
+                                    .offset(x: 2, y: 2)
+                            }
                         Text(s.title).font(.callout).lineLimit(1).truncationMode(.tail)
                         Spacer(minLength: 8)
                         if s.state == .waiting {

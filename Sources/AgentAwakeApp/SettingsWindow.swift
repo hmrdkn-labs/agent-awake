@@ -60,15 +60,15 @@ struct AgentsTab: View {
                     if installed.isEmpty {
                         Text("No supported agent found. Install one, then come back here.").foregroundStyle(.secondary)
                     }
-                    ForEach(installed, id: \.integration.id) { IntegrationRow(model: model, row: $0) }
+                    ForEach(installed, id: \.integration.id) { AgentRow(model: model, row: $0, showFiles: true) }
                 }
                 Section("Detected without setup") {
-                    automaticRow("herdr panes", detail: model.herdrPath == nil ? "herdr not installed" : "Working panes are followed",
+                    automaticRow("herdr", "herdr panes", detail: model.herdrPath == nil ? "herdr not installed" : "Working panes are followed",
                                  on: model.herdrPath != nil && model.herdrWatch)
-                    automaticRow("oh-my-pi, Codex, Zed", detail: "Seen while they hold the Mac awake for a turn", on: true)
+                    automaticRow("omp", "oh-my-pi, Codex, Zed", detail: "Seen while they hold the Mac awake for a turn", on: true)
                 }
                 Section("Other supported agents") {
-                    ForEach(missing, id: \.integration.id) { IntegrationRow(model: model, row: $0) }
+                    ForEach(missing, id: \.integration.id) { AgentRow(model: model, row: $0, showFiles: true) }
                 }
             }
             .listStyle(.inset(alternatesRowBackgrounds: false))
@@ -81,75 +81,17 @@ struct AgentsTab: View {
         }
     }
 
-    private func automaticRow(_ name: String, detail: String, on: Bool) -> some View {
-        HStack {
-            Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(on ? .green : .secondary)
-            VStack(alignment: .leading) {
-                Text(name)
+    private func automaticRow(_ icon: String, _ name: String, detail: String, on: Bool) -> some View {
+        HStack(spacing: 12) {
+            AgentIcon(id: icon)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.body.weight(.medium))
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
-        }
-    }
-}
-
-struct IntegrationRow: View {
-    @ObservedObject var model: Model
-    let row: Model.IntegrationState
-    @State private var showFiles = false
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon).foregroundStyle(color).frame(width: 18).padding(.top, 2)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(row.integration.name).font(.body.weight(.medium))
-                Text(statusText).font(.caption).foregroundStyle(color == .secondary ? .secondary : color)
-                    .fixedSize(horizontal: false, vertical: true)
-                if showFiles {
-                    ForEach(row.integration.files, id: \.self) {
-                        Text($0).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
-                    }
-                }
-            }
             Spacer()
-            Button { showFiles.toggle() } label: { Image(systemName: "info.circle") }
-                .buttonStyle(.borderless).help("Files Connect writes")
-            switch row.status {
-            case .connected, .needsAction, .broken:
-                Button("Disconnect") { model.disconnect(row.integration) }
-            case .available:
-                Button("Connect") { model.connect(row.integration) }.buttonStyle(.borderedProminent)
-            case .notInstalled:
-                EmptyView()
-            }
+            if on { Pill(text: "Automatic", color: .green, systemImage: "checkmark") }
         }
-        .padding(.vertical, 3)
-    }
-
-    private var statusText: String {
-        switch row.status {
-        case .notInstalled: return "Not installed"
-        case .available: return "Installed, not connected"
-        case .connected: return "Connected"
-        case .needsAction(let s): return s
-        case .broken(let s): return s
-        }
-    }
-    private var icon: String {
-        switch row.status {
-        case .connected: return "checkmark.circle.fill"
-        case .needsAction: return "exclamationmark.circle.fill"
-        case .broken: return "xmark.octagon.fill"
-        case .available: return "circle"
-        case .notInstalled: return "circle.dotted"
-        }
-    }
-    private var color: Color {
-        switch row.status {
-        case .connected: return .green
-        case .needsAction: return .orange
-        case .broken: return .red
-        default: return .secondary
-        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -159,6 +101,7 @@ struct NotificationsTab: View {
     @ObservedObject var model: Model
     @State private var draft = Config()
     @State private var telegramStatus = ""
+    @State private var results: [String: PingResult] = [:]
 
     var body: some View {
         Form {
@@ -227,7 +170,13 @@ struct NotificationsTab: View {
     }
 
     private func testButton(_ channel: String) -> some View {
-        Button("Send test") { model.saveConfig(draft); model.testPing(channel: channel) }
+        HStack(spacing: 8) {
+            Button("Send test") {
+                model.saveConfig(draft)
+                model.testPing(channel: channel) { results[channel] = $0 }
+            }
+            (results[channel] ?? .idle).view
+        }
     }
 
     private func findTelegramChat() {
