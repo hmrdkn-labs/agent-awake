@@ -5,7 +5,7 @@ let usage = """
 usage:
   smart-work begin <name> [--timeout 30m]   start a session (holds the Mac awake)
   smart-work beat  <name>                   heartbeat; resets the timeout
-  smart-work done  <name>                   finish; notifies your phone
+  smart-work done  <name> [--message text]  finish; notifies your phone
   smart-work run   <name> [--timeout 30m] -- <cmd...>
                                             begin, heartbeat while <cmd> runs, done; exits with <cmd>'s status
   smart-work list
@@ -42,6 +42,7 @@ guard let cmd = args.first else { fail(usage, code: 2) }
 args.removeFirst()
 
 var timeout: Double?
+var message: String?
 var command: [String] = []
 var positional: [String] = []
 var i = 0
@@ -51,13 +52,17 @@ while i < args.count {
         guard i + 1 < args.count, let t = parseDuration(args[i + 1]) else { fail("bad --timeout", code: 2) }
         timeout = t; i += 2; continue
     }
+    if args[i] == "--message" {
+        guard i + 1 < args.count else { fail("bad --message", code: 2) }
+        message = args[i + 1]; i += 2; continue
+    }
     positional.append(args[i]); i += 1
 }
 
 switch cmd {
 case "begin", "beat", "done":
     guard let name = positional.first else { fail(usage, code: 2) }
-    _ = call(Request(cmd: cmd, name: name, timeout: timeout))
+    _ = call(Request(cmd: cmd, name: name, timeout: timeout, message: message))
 case "list":
     for s in call(Request(cmd: "list")).sessions ?? [] {
         let age = formatDuration(Date().timeIntervalSince1970 - s.startedAt)

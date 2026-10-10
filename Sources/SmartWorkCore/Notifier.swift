@@ -9,11 +9,32 @@ public struct Config: Codable {
     public var ntfyTopic: String?
 
     public static func load() -> Config {
-        var c = (try? JSONDecoder().decode(Config.self, from: Data(contentsOf: URL(fileURLWithPath: Paths.config)))) ?? Config()
+        var c = readFile()
         if let t = ProcessInfo.processInfo.environment["SMART_WORK_NTFY_TOPIC"] { c.ntfyTopic = t }
         if let s = ProcessInfo.processInfo.environment["SMART_WORK_NTFY_SERVER"] { c.ntfyServer = s }
         return c
     }
+    private static func readFile() -> Config {
+        (try? JSONDecoder().decode(Config.self, from: Data(contentsOf: URL(fileURLWithPath: Paths.config)))) ?? Config()
+    }
+
+    /// First run: invent an unguessable topic and persist it, so phone setup is just "subscribe to this".
+    public static func loadEnsuringTopic() -> Config {
+        var file = readFile()
+        if (file.ntfyTopic ?? "").isEmpty, ProcessInfo.processInfo.environment["SMART_WORK_NTFY_TOPIC"] == nil {
+            let chars = Array("abcdefghijklmnopqrstuvwxyz0123456789")
+            file.ntfyTopic = "smart-work-" + String((0..<16).map { _ in chars.randomElement()! })
+            try? file.save()
+        }
+        return load()
+    }
+
+    public func save() throws {
+        try FileManager.default.createDirectory(atPath: Paths.dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try enc.encode(self).write(to: URL(fileURLWithPath: Paths.config), options: .atomic)
+    }
+
     public init(ntfyServer: String? = nil, ntfyTopic: String? = nil) {
         self.ntfyServer = ntfyServer; self.ntfyTopic = ntfyTopic
     }

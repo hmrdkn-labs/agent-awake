@@ -5,8 +5,9 @@ public struct Request: Codable {
     public var cmd: String            // begin | beat | done | list
     public var name: String?
     public var timeout: Double?       // seconds of allowed silence; nil/0 = never expires
-    public init(cmd: String, name: String? = nil, timeout: Double? = nil) {
-        self.cmd = cmd; self.name = name; self.timeout = timeout
+    public var message: String?       // optional text for the `done` ping
+    public init(cmd: String, name: String? = nil, timeout: Double? = nil, message: String? = nil) {
+        self.cmd = cmd; self.name = name; self.timeout = timeout; self.message = message
     }
 }
 

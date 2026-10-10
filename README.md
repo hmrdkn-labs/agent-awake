@@ -12,6 +12,7 @@ when it finishes or goes quiet. Like `caffeinate -i`, but the work reports itsel
 ```sh
 swift build -c release
 .build/release/SmartWork &          # menu bar app (moon = idle, bolt = holding awake)
+# herdr users: agents that are "working" are followed automatically ("Follow herdr agents" in the menu)
 
 smart-work begin omp-1 --timeout 30m   # start; timeout = max silence before "stuck"
 smart-work beat  omp-1                 # heartbeat, resets the timeout
@@ -25,7 +26,8 @@ The menu's "Keep awake" toggle is a manual session that never expires.
 
 ## Phone pings (ntfy)
 
-`~/.smart-work/config.json`:
+A random topic is generated on first run and shown under the menu's "Phone notifications" (copy it,
+subscribe in the ntfy app, press "Send test ping"). To choose your own, edit `~/.smart-work/config.json`:
 
 ```json
 { "ntfyTopic": "pick-a-long-random-string", "ntfyServer": "https://ntfy.sh" }

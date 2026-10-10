@@ -71,7 +71,7 @@ public final class Engine {
             changed()
             let idle = store.list().isEmpty
             notifier.send(title: "smart-work: \(s.name) done",
-                          body: "Finished after \(formatDuration(now() - s.startedAt))." + (idle ? " No sessions left; Mac can sleep." : ""))
+                          body: (r.message ?? "Finished after \(formatDuration(now() - s.startedAt)).") + (idle ? " No sessions left; Mac can sleep." : ""))
             return Response(ok: true, sessions: store.list())
         default:
             return Response(ok: false, error: "unknown cmd \(r.cmd)")
