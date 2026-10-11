@@ -14,6 +14,7 @@ First release.
 - Pings name only the agent and project folder unless you opt in to task titles, since prompts can hold
   private text.
 - A session that needs you keeps the Mac awake 15 minutes so you can answer remotely.
+- Keep awake presets (1h, 2h, 4h, until off) that also keep the screen on; agent work lets it sleep and lock.
 - Quiet agents still running a build stay awake; agents whose process exited are released at once.
 - Optional lid-closed mode through a privileged helper, with battery and heat safety stops.
 - `agentawake` command: `run`, `begin`/`beat`/`done`, `list`, `agents`, `connect`/`disconnect`, `settings`.

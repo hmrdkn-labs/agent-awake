@@ -72,7 +72,7 @@ public final class Engine {
 
     private func changed() {
         let list = store.list()
-        power.setHeld(!list.isEmpty)
+        power.setHeld(system: !list.isEmpty, display: list.contains { $0.name == Engine.manualName })
         onChange?(list)
     }
 

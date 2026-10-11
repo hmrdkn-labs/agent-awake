@@ -1,7 +1,10 @@
 import XCTest
 @testable import AgentAwakeCore
 
-final class FakePower: PowerHolding { var held = false; func setHeld(_ h: Bool) { held = h } }
+final class FakePower: PowerHolding {
+    var held = false, display = false
+    func setHeld(system: Bool, display: Bool) { held = system; self.display = display }
+}
 final class FakeNotifier: Notifier {
     var sent: [(String, String)] = []
     var alerts: [Alert] = []
@@ -110,6 +113,16 @@ final class EngineTests: XCTestCase {
         XCTAssertTrue(p.held)
         t += 1; e.tick()
         XCTAssertFalse(p.held); XCTAssertTrue(n.sent.isEmpty)
+    }
+
+    func testOnlyKeepAwakeHoldsTheScreenOn() {
+        let (e, p, _) = make()
+        XCTAssertTrue(e.handle(Request(cmd: "begin", name: "job", timeout: 0)).ok)
+        XCTAssertTrue(p.held); XCTAssertFalse(p.display, "agent work lets the screen sleep and lock")
+        e.setManual(duration: 3600)
+        XCTAssertTrue(p.display)
+        t += 3600; e.tick()
+        XCTAssertTrue(p.held, "the agent still runs"); XCTAssertFalse(p.display, "screen released with Keep awake")
     }
 
     func testUnknownSessionErrors() {

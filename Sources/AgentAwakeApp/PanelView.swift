@@ -127,9 +127,9 @@ struct PanelView: View {
                             .foregroundStyle(selected ? Color.white : Color.primary)
                     }
                     .buttonStyle(.plain)
-                    .help(duration == nil ? "Only agents keep the Mac awake"
-                          : duration == 0 ? "Stay awake until you turn it off"
-                          : "Stay awake for \(label), then sleep normally")
+                    .help(duration == nil ? "Only agents keep the Mac awake; the screen sleeps and locks as usual"
+                          : duration == 0 ? "Keep the Mac and screen on until you turn it off"
+                          : "Keep the Mac and screen on for \(label), then sleep normally")
                 }
             }
         }

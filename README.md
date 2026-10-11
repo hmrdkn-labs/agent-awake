@@ -26,7 +26,7 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
 - **Works with your agents, one click each.** Agent Awake connects to each agent's own hooks: it knows
   when a prompt starts, when the turn ends, and when the agent is waiting for you.
 - **Awake only while agents work.** While any agent is working the Mac doesn't idle-sleep. When the
-  last one finishes, normal sleep comes back by itself. The screen still dims.
+  last one finishes, normal sleep comes back by itself. The screen still turns off and locks, to save battery.
 - **Pings that matter.** "Fix login bug is done", "Claude Code needs you: Allow Bash?", "stopped with an
   error". They go to your phone only while you're away from the Mac (idle, locked, lid closed). When
   you're at the Mac you get a regular Mac notification instead.
@@ -36,7 +36,8 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
   awake. One whose process exited is let go at once, and one that is truly stuck gets you a ping.
 - **Lid closed (optional).** Keep agents running in your bag. A small privileged helper turns this on only
   while work runs, and turns it off if the battery reaches 10%, the Mac gets hot, or the app quits.
-- **Keep awake presets.** 1h, 2h, 4h, or until you turn it off, for when you want plain caffeinate.
+- **Keep awake presets.** 1h, 2h, 4h, or until you turn it off. These also keep the screen on and unlocked,
+  like `caffeinate -d`, for when you're watching or presenting.
 
 ## Install
 
