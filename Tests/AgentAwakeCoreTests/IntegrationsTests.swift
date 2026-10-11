@@ -104,8 +104,10 @@ final class IntegrationsTests: XCTestCase {
     // MARK: Claude (shared settings file)
 
     func testClaudeConnectIntoEmptyHomeRegistersExactlyCatalogEvents() throws {
+        // Claude writes ~/.claude.json on first run; with it, detection doesn't depend on what this host has installed.
+        try write(".claude.json", "{}")
         let claude = integration("claude")
-        XCTAssertTrue([.notInstalled, .available].contains(claude.status()), "detection also looks outside the temp home")
+        XCTAssertEqual(claude.status(), .available)
         try claude.connect()
         let doc = try json(".claude/settings.json")
         let hooks = doc["hooks"]!.objectPairs!
@@ -126,7 +128,7 @@ final class IntegrationsTests: XCTestCase {
 
         try claude.disconnect()
         XCTAssertFalse(FileManager.default.fileExists(atPath: path(".claude/settings.json")), "a file we created and emptied is removed")
-        XCTAssertEqual(claude.status(), .available, "~/.claude still exists")
+        XCTAssertEqual(claude.status(), .available, "Claude is still installed, just not connected")
     }
 
     func testClaudeMergesIntoRealisticSettingsAndDisconnectRestoresThem() throws {

@@ -5,6 +5,18 @@
 <p align="center"><b>caffeinate for AI agents.</b> Your Mac stays awake while agents work,<br>
 sleeps the moment they're done, and your phone tells you.</p>
 
+<p align="center">
+  <a href="https://github.com/hmrdkn-labs/agent-awake/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/hmrdkn-labs/agent-awake"></a>
+  <a href="https://github.com/hmrdkn-labs/agent-awake/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hmrdkn-labs/agent-awake/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-blue">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green"></a>
+</p>
+
+<p align="center"><a href="https://github.com/hmrdkn-labs/agent-awake/releases/latest"><b>Download for Mac</b></a></p>
+
+<p align="center"><img src="assets/screenshots/setup.png" width="420" alt="Agent Awake setup window">
+<img src="assets/screenshots/settings-agents.png" width="440" alt="Agents settings: Claude Code connected, Codex waiting for one step, more agents ready to connect"></p>
+
 ---
 
 Leaving Claude Code, Codex or a long build running and walking away means choosing between a Mac that
@@ -28,8 +40,8 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
 
 ## Install
 
-Download the DMG from [Releases](https://github.com/hmrdkn-labs/agent-awake/releases), drag
-**Agent Awake** to Applications and open it. It's signed with Developer ID and notarized by Apple.
+Download the DMG from the [latest release](https://github.com/hmrdkn-labs/agent-awake/releases/latest),
+drag **Agent Awake** to Applications and open it. It's signed with Developer ID and notarized by Apple.
 Requires macOS 13 or later, on Apple silicon or Intel.
 
 The first launch opens a short setup window: connect the agents it found, set up phone pings, and

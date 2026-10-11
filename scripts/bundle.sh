@@ -10,7 +10,7 @@ VERSION="${VERSION:-0.1.0}"
 APP="dist/Agent Awake.app"
 # A release waiting on Apple notarizes this exact build; rebuilding would orphan it.
 for s in dist/release-*/app.id; do
-  [ -e "$s" ] || continue
+  [ -e "$s" ] && [ ! -e "$(dirname "$s")/released" ] || continue
   [ "${FORCE:-}" = 1 ] || { echo "a release is in progress ($(dirname "$s")); finish it or rerun with FORCE=1" >&2; exit 1; }
 done
 

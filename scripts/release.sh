@@ -116,5 +116,6 @@ EOF
 fi
 notify "Released v$VERSION: https://github.com/$REPO/releases/tag/v$VERSION"
 rm -f "$STATE/app.zip"
+touch "$STATE/released"
 unschedule
 echo released
