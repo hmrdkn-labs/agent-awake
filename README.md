@@ -60,6 +60,7 @@ running.
 | Claude Code (CLI, desktop app, IDE) | `claude` | ✓ | ✓ | `~/.claude/settings.json` |
 | Codex (CLI, ChatGPT app, IDE) | `codex` | ✓ | ✓ | `~/.codex/hooks.json`, trusted once in Codex |
 | Gemini CLI | `gemini` | ✓ | ✓ | extension in `~/.gemini/extensions` |
+| Antigravity (IDE, `agy` CLI) | `antigravity` | ✓ | | `~/.gemini/config/hooks.json` |
 | Qwen Code | `qwen` | ✓ | ✓ | `~/.qwen/settings.json` |
 | Factory Droid | `droid` | ✓ | ✓ | `~/.factory/hooks.json` |
 | GitHub Copilot (CLI, VS Code) | `copilot` | ✓ | ✓ | `~/.copilot/hooks/agentawake.json` |

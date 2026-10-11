@@ -1,51 +1,53 @@
 import SwiftUI
 import AgentAwakeCore
 
-/// The agent's own app icon when its Mac app is installed, else a tinted glyph.
+/// The agent's official mark (Resources/AgentIcons, see NOTICE.md there), on a tile so every row lines up.
+/// Monochrome marks are template images, tinted for light and dark mode; marks that are already app-icon
+/// tiles fill the frame.
 struct AgentIcon: View {
     let id: String
     var size: CGFloat = 28
 
-    private static let bundles: [String: [String]] = [
-        "claude": ["com.anthropic.claudefordesktop"],
-        "codex": ["com.openai.codex"],
-        "cursor": ["com.todesktop.230313mzl4w4u92"],
-        "windsurf": ["com.exafunction.windsurf"],
-        "copilot": ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"],
-        "zed": ["dev.zed.Zed"],
-    ]
-    private static let glyphs: [String: (String, Color)] = [
-        "gemini": ("sparkle", .blue), "qwen": ("q.circle.fill", .purple), "droid": ("cpu.fill", .orange),
-        "auggie": ("wand.and.stars", .teal), "devin": ("person.crop.square.fill", .indigo),
-        "kiro": ("k.circle.fill", .purple), "goose": ("bird.fill", .gray), "junie": ("j.circle.fill", .green),
-        "opencode": ("chevron.left.forwardslash.chevron.right", .primary), "kilo": ("k.square.fill", .yellow),
-        "amp": ("bolt.fill", .pink), "omp": ("p.circle.fill", .mint), "pi": ("p.square.fill", .mint),
-        "herdr": ("rectangle.split.3x1.fill", .cyan),
-    ]
+    private static let monochrome: Set<String> = ["copilot", "cursor", "windsurf", "goose", "opencode", "kilo", "pi",
+                                                  "auggie", "zed"]
+    private static let tiles: Set<String> = ["codex", "gemini", "kiro", "omp", "herdr", "droid"]
     private static var cache: [String: NSImage] = [:]
 
     var body: some View {
-        if let img = Self.appIcon(id) {
-            Image(nsImage: img).resizable().interpolation(.high).frame(width: size, height: size)
+        let radius = size * 0.24
+        if let img = Self.mark(id) {
+            if Self.tiles.contains(id) {
+                Image(nsImage: img).resizable().interpolation(.high)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(Color.primary.opacity(0.07))
+                    .overlay {
+                        if Self.monochrome.contains(id) {
+                            Image(nsImage: img).resizable().renderingMode(.template).interpolation(.high)
+                                .foregroundStyle(.primary).scaledToFit().padding(size * 0.18)
+                        } else {
+                            Image(nsImage: img).resizable().interpolation(.high).scaledToFit().padding(size * 0.14)
+                        }
+                    }
+                    .frame(width: size, height: size)
+            }
         } else {
-            let (symbol, tint) = Self.glyphs[id] ?? ("terminal.fill", .secondary)
-            RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
-                .fill(tint.opacity(0.18))
-                .overlay(Image(systemName: symbol).font(.system(size: size * 0.48, weight: .semibold)).foregroundStyle(tint))
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(Color.primary.opacity(0.07))
+                .overlay(Image(systemName: "terminal.fill").font(.system(size: size * 0.45, weight: .semibold))
+                    .foregroundStyle(.secondary))
                 .frame(width: size, height: size)
         }
     }
 
-    private static func appIcon(_ id: String) -> NSImage? {
+    private static func mark(_ id: String) -> NSImage? {
         if let c = cache[id] { return c }
-        for b in bundles[id] ?? [] {
-            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: b) {
-                let img = NSWorkspace.shared.icon(forFile: url.path)
-                cache[id] = img
-                return img
-            }
-        }
-        return nil
+        guard let url = Bundle.main.url(forResource: id, withExtension: "png", subdirectory: "AgentIcons"),
+              let img = NSImage(contentsOf: url) else { return nil }
+        cache[id] = img
+        return img
     }
 }
 

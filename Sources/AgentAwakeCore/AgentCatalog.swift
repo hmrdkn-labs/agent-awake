@@ -40,6 +40,11 @@ public enum AgentCatalog {
             ("BeforeAgent", .start), ("BeforeTool", .beat), ("AfterTool", .beat),
             ("Notification", .needsYou), ("AfterAgent", .stop), ("SessionEnd", .end),
         ]),
+        // Antigravity 2.0, the IDE and the agy CLI share ~/.gemini/config/hooks.json. No hook fires while it waits
+        // for an approval (PreToolUse must decide, so we don't register it).
+        AgentSpec(id: "antigravity", name: "Antigravity", events: [
+            ("PreInvocation", .start), ("PostToolUse", .beat), ("PostInvocation", .beat), ("Stop", .stop),
+        ]),
         AgentSpec(id: "qwen", name: "Qwen Code", events: [
             ("UserPromptSubmit", .start), ("PreToolUse", .beat), ("PostToolUse", .beat),
             ("PermissionRequest", .needsYou), ("Notification", .needsYou),

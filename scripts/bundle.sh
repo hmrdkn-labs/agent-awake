@@ -22,6 +22,7 @@ rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Co
 cp "$BIN/AgentAwakeApp" "$BIN/agentawake" "$BIN/agentawake-helper" "$APP/Contents/MacOS/"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@BUILD@/$(git rev-list --count HEAD)/g" Resources/Info.plist > "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
+cp -R Resources/AgentIcons "$APP/Contents/Resources/"
 cp Resources/com.hamardikan.agent-awake.helper.plist "$APP/Contents/Library/LaunchDaemons/"
 
 # Hardened runtime + secure timestamp are required for notarization. Sign inside-out, no --deep.

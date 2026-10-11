@@ -10,11 +10,12 @@ final class HerdrWatcherTests: XCTestCase {
         return Data("{\"result\":{\"agents\":\(agents)}}".utf8)
     }
     var running = true
+    var titles = true
     var fetches = 0
     func make() -> (HerdrWatcher, Engine, FakePower, FakeNotifier) {
         let p = FakePower(), n = FakeNotifier()
         let e = Engine(notifier: n, power: p)
-        let w = HerdrWatcher(engine: e, quietPolls: 2, idleEvery: 4, isRunning: { self.running },
+        let w = HerdrWatcher(engine: e, quietPolls: 2, idleEvery: 4, isRunning: { self.running }, taskTitles: { self.titles },
                              fetch: { self.fetches += 1; return self.json() })
         return (w, e, p, n)
     }
@@ -50,7 +51,7 @@ final class HerdrWatcherTests: XCTestCase {
         let (w, e, _, _) = make()
         w.poll(); title = "π ⁝ Write tests"; w.poll()
         XCTAssertEqual(e.store.list().first?.title, "Write tests")
-        XCTAssertEqual(HerdrCLI.label(title: "", cwd: "/src/shop", agent: "omp"), "omp · shop")
+        XCTAssertEqual(HerdrCLI.label(title: "", cwd: "/src/shop", agent: "omp"), "oh-my-pi · shop")
         XCTAssertEqual(HerdrCLI.label(title: "make -j8 > build.log", cwd: nil, agent: "omp"), "make -j8 > build.log")
     }
 
@@ -76,8 +77,17 @@ final class HerdrWatcherTests: XCTestCase {
         let p = FakePower(), n = FakeNotifier()
         let e = Engine(notifier: n, power: p)
         var up = true
-        let w = HerdrWatcher(engine: e, quietPolls: 1, isRunning: { true }, fetch: { up ? self.json() : nil })
+        let w = HerdrWatcher(engine: e, quietPolls: 1, isRunning: { true }, taskTitles: { true }, fetch: { up ? self.json() : nil })
         w.poll(); up = false; w.poll(); w.poll()
         XCTAssertTrue(p.held); XCTAssertTrue(n.sent.isEmpty)
+    }
+}
+
+extension HerdrWatcherTests {
+    func testPaneTitlesStayPrivateUnlessTaskTitlesAreOn() {
+        titles = false
+        let (w, e, _, _) = make()
+        w.poll()
+        XCTAssertEqual(e.store.list().first?.title, "oh-my-pi · shop", "agent and folder only")
     }
 }

@@ -589,3 +589,33 @@ final class IntegrationsTests: XCTestCase {
         return (p.terminationStatus, String(decoding: out, as: UTF8.self), String(decoding: err, as: UTF8.self))
     }
 }
+
+extension IntegrationsTests {
+    /// Antigravity's hooks.json maps hook *names* to definitions; ours is one named definition next to the user's.
+    func testAntigravityAddsOneNamedDefinitionAndDisconnectRestoresTheFile() throws {
+        let herdr = """
+        {
+          "herdr": {
+            "PreInvocation": [
+              { "command": "bash '/x/herdr-agent-state.sh' session", "timeout": 10, "type": "command" }
+            ]
+          }
+        }
+
+        """
+        try write(".gemini/config/hooks.json", herdr)
+        let ag = integration("antigravity")
+        try ag.connect()
+        let doc = try json(".gemini/config/hooks.json")
+        XCTAssertNotNil(doc["herdr"], "the user's definition stays")
+        let ours = doc["agentawake"]!
+        XCTAssertEqual(ours.objectPairs!.map(\.key), ["PreInvocation", "PostToolUse", "PostInvocation", "Stop"])
+        XCTAssertEqual(ours["Stop"]!.arrayValue![0]["command"]?.stringValue,
+                       Integrations.hookCommand(agent: "antigravity", event: "Stop", home: home), "flat handler for non-tool events")
+        XCTAssertEqual(ours["PostToolUse"]!.arrayValue![0]["matcher"]?.stringValue, "*")
+        XCTAssertEqual(ag.status(), .connected)
+        try ag.disconnect()
+        XCTAssertNil(try json(".gemini/config/hooks.json")["agentawake"])
+        XCTAssertEqual(try json(".gemini/config/hooks.json"), try JSONParser.parse(herdr, allowComments: false).value)
+    }
+}

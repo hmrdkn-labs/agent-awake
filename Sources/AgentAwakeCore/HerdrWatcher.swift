@@ -29,14 +29,16 @@ public enum HerdrCLI {
         return p.terminationStatus == 0 ? data : nil
     }
 
-    public static func parse(_ data: Data) -> [AgentSnapshot]? {
+    /// `taskTitles` false: sessions are named by agent and folder only, as for hooked agents (the pane title is
+    /// the agent's task, which can hold private text that pings carry to third-party servers).
+    public static func parse(_ data: Data, taskTitles: Bool = true) -> [AgentSnapshot]? {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let result = root["result"] as? [String: Any],
               let agents = result["agents"] as? [[String: Any]] else { return nil }
         return agents.compactMap {
             guard let id = $0["pane_id"] as? String, let st = $0["agent_status"] as? String else { return nil }
             let agent = ($0["agent"] as? String) ?? "agent"
-            let title = ($0["terminal_title_stripped"] as? String) ?? ($0["terminal_title"] as? String)
+            let title = taskTitles ? (($0["terminal_title_stripped"] as? String) ?? ($0["terminal_title"] as? String)) : nil
             return AgentSnapshot(paneID: id, agent: agent, status: st,
                                  label: label(title: title, cwd: $0["cwd"] as? String, agent: agent))
         }
@@ -50,8 +52,9 @@ public enum HerdrCLI {
             t = String(t[r.upperBound...]).trimmingCharacters(in: .whitespaces)
         }
         if !t.isEmpty { return t }
-        if let c = cwd, !c.isEmpty { return "\(agent) · \((c as NSString).lastPathComponent)" }
-        return agent
+        let name = AgentCatalog.spec(agent)?.name ?? agent
+        if let c = cwd, !c.isEmpty { return "\(name) · \((c as NSString).lastPathComponent)" }
+        return name
     }
 }
 
@@ -63,6 +66,7 @@ public final class HerdrWatcher {
     private let engine: Engine
     private let fetch: () -> Data?
     private let isRunning: () -> Bool
+    private let taskTitles: () -> Bool
     private let quietPolls: Int
     private let idleEvery: Int
     private let sessionTimeout: Double
@@ -72,8 +76,10 @@ public final class HerdrWatcher {
     private let lock = NSLock()
 
     public init(engine: Engine, interval: Double = 3, quietPolls: Int = 2, idleEvery: Int = 4,
-                isRunning: @escaping () -> Bool = { ProcessList.contains("herdr") }, fetch: @escaping () -> Data?) {
-        self.engine = engine; self.fetch = fetch; self.isRunning = isRunning
+                isRunning: @escaping () -> Bool = { ProcessList.contains("herdr") },
+                taskTitles: @escaping () -> Bool = { Config.load().effectiveTaskTitles },
+                fetch: @escaping () -> Data?) {
+        self.engine = engine; self.fetch = fetch; self.isRunning = isRunning; self.taskTitles = taskTitles
         self.quietPolls = quietPolls; self.idleEvery = idleEvery
         self.sessionTimeout = max(60, interval * 10)
         self.interval = interval
@@ -112,7 +118,7 @@ public final class HerdrWatcher {
         if !isRunning() {
             agents = []                                   // herdr quit: its panes are gone
         } else {
-            guard let data = fetch(), let a = HerdrCLI.parse(data) else { return }   // unreachable: change nothing
+            guard let data = fetch(), let a = HerdrCLI.parse(data, taskTitles: taskTitles()) else { return }   // unreachable: change nothing
             agents = a
         }
         lock.lock(); defer { lock.unlock() }

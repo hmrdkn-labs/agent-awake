@@ -405,3 +405,29 @@ final class HookAdapterPrivacyTests: XCTestCase {
         XCTAssertEqual(run("Approve bash: rm -rf secrets", true), "Approve bash: rm -rf secrets")
     }
 }
+
+final class AntigravityHookTests: XCTestCase {
+    let common = #""conversationId":"ec33","workspacePaths":["/workspace/project"],"transcriptPath":"~/.gemini/antigravity/brain/ec33/t.jsonl","modelName":"gemini-3.6-flash-medium""#
+
+    func run(_ event: String, _ fields: String) -> [Request] {
+        HookAdapter.requests(agent: "antigravity", event: event, payload: Data("{\(common),\(fields)}".utf8),
+                             env: [:], agentPID: 7, config: Config())
+    }
+
+    func testTurnLifecycle() {
+        let start = run("PreInvocation", #""invocationNum":0,"initialNumSteps":1"#)
+        XCTAssertEqual(start.first?.cmd, "beat"); XCTAssertEqual(start.first?.name, "antigravity:ec33")
+        XCTAssertEqual(start.first?.label, "Antigravity · project")
+        XCTAssertEqual(run("Stop", #""executionNum":1,"terminationReason":"model_stop","error":"","fullyIdle":false"#).first?.cmd, "beat",
+                       "background commands still running: not done")
+        let done = run("Stop", #""executionNum":1,"terminationReason":"model_stop","error":"","fullyIdle":true"#).first
+        XCTAssertEqual(done?.cmd, "done"); XCTAssertEqual(done?.kind, .finished)
+        let failed = run("Stop", #""executionNum":2,"terminationReason":"max_steps_exceeded","error":"","fullyIdle":true"#).first
+        XCTAssertEqual(failed?.kind, .failed); XCTAssertEqual(failed?.message, "Max steps exceeded")
+    }
+
+    func testEveryHookAnswersWithJSONThatChangesNothing() {
+        XCTAssertEqual(HookAdapter.stdout(agent: "antigravity", event: "Stop"), #"{"decision":"stop"}"#)
+        XCTAssertEqual(HookAdapter.stdout(agent: "antigravity", event: "PostToolUse"), "{}")
+    }
+}

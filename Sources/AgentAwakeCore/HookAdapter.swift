@@ -91,6 +91,11 @@ public enum HookAdapter {
             return [Request(cmd: "wait", name: name, label: label, fallbackLabel: fallback, agent: id, pid: agentPID,
                             message: needsYouMessage(p, config, plugin: AgentCatalog.spec(id)?.action(for: "needsYou") == .needsYou))]
         case .stop:
+            // Antigravity stops its loop while background commands still run (fullyIdle false): not done yet.
+            if p.bool("fullyIdle") == false {
+                return [Request(cmd: "beat", name: name, fallbackLabel: fallback, agent: id, pid: agentPID,
+                                timeout: SessionStore.defaultTimeout)]
+            }
             let kind = stopKind(p)
             return [Request(cmd: "done", name: name, agent: id, kind: kind,
                             message: kind == .failed ? errorDetail(p) : nil)]
@@ -103,7 +108,13 @@ public enum HookAdapter {
 
     /// What the agent must read on stdout for the hook to be a no-op; nil = print nothing.
     public static func stdout(agent: String, event: String) -> String? {
-        agent == "cursor" && event == "beforeSubmitPrompt" ? #"{"continue":true}"# : nil
+        switch (agent, event) {
+        case ("cursor", "beforeSubmitPrompt"): return #"{"continue":true}"#
+        // Antigravity reads a JSON object from every hook; Stop's `decision` must not be "continue".
+        case ("antigravity", "Stop"): return #"{"decision":"stop"}"#
+        case ("antigravity", _): return "{}"
+        default: return nil
+        }
     }
 
     static let shells: Set<String> = ["sh", "bash", "zsh", "dash", "fish", "env", "ksh", "tcsh", "csh"]
@@ -144,12 +155,12 @@ public enum HookAdapter {
     static func sessionID(_ p: Payload, agent: String) -> String? {
         switch agent {
         case "cursor", "auggie": return p.str("conversation_id", "session_id", "sessionId")
-        default: return p.str("session_id", "sessionId", "sessionID", "conversation_id", "trajectory_id")
+        default: return p.str("session_id", "sessionId", "sessionID", "conversation_id", "conversationId", "trajectory_id")
         }
     }
 
     static func cwd(_ p: Payload, env: [String: String]) -> String? {
-        p.first("workspace_roots") ?? p.first("workspaceRoots")
+        p.first("workspace_roots") ?? p.first("workspaceRoots") ?? p.first("workspacePaths")
             ?? p.str("cwd", "working_dir", "project_path", "directory")
             ?? [env["DEVIN_PROJECT_DIR"], env["CURSOR_PROJECT_DIR"], env["PWD"]].lazy.compactMap { $0 }.first { !$0.isEmpty }
     }
@@ -216,7 +227,8 @@ public enum HookAdapter {
     }
 
     static func stopKind(_ p: Payload) -> DoneKind {
-        switch p.str("status", "agent_stop_cause", "stopReason")?.lowercased() {
+        switch p.str("status", "agent_stop_cause", "stopReason", "terminationReason")?.lowercased() {
+        case "max_steps_exceeded": return .failed
         case "error", "failed", "failure": return .failed
         case "aborted", "abort", "cancelled", "canceled", "interrupted": return .ended
         default: return .finished
@@ -224,7 +236,7 @@ public enum HookAdapter {
     }
 
     static func errorDetail(_ p: Payload) -> String? {
-        let code = p.str("error", "error.message").map { s -> String in
+        let code = p.str("error", "error.message", "terminationReason").map { s -> String in
             guard s.allSatisfy({ $0.isLowercase || $0 == "_" }) else { return s }
             let words = s.replacingOccurrences(of: "_", with: " ")
             return words.prefix(1).uppercased() + words.dropFirst()   // rate_limit -> Rate limit

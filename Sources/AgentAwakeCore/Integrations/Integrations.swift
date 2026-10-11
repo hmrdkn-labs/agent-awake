@@ -225,8 +225,21 @@ public enum Integrations {
             let files = [(dir + "/gemini-extension.json", manifest.serialized() + "\n"),
                          (dir + "/hooks/hooks.json", JSONValue.obj([("hooks", hooks)]).serialized() + "\n")]
             return integration(files.map(\.0), note: "Installed as a Gemini CLI extension, so it also works in folders you haven't trusted. Restart Gemini CLI to load it.",
-                               detect: Detection(binaries: ["gemini"], paths: [".gemini/trustedFolders.json", ".gemini/tmp"]),
+                               // ~/.gemini is shared with Antigravity, so only the gemini binary means Gemini CLI.
+                               detect: Detection(binaries: ["gemini"]),
                                .owned(files, root: dir, stop: h + "/.gemini/extensions"))
+
+        case "antigravity":
+            // One named hook definition ("agentawake") in the hooks file all three Antigravity apps read.
+            let path = h + "/.gemini/config/hooks.json"
+            let file = shared(path, container: ["agentawake"]) { e in
+                let handler: [(String, JSONValue)] = [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5))]
+                return e == "PostToolUse" ? group("*", handler) : .obj(handler)
+            }
+            return integration([path], note: "Covers Antigravity 2.0, the Antigravity IDE and the agy CLI. Antigravity has no hook for approvals, so Agent Awake hears when work starts and finishes. In agy, /hooks lists it.",
+                               detect: Detection(binaries: ["agy"], apps: [("Antigravity.app", nil)],
+                                                 paths: [".gemini/antigravity-cli/cli.log", ".gemini/antigravity/installation_id", ".gemini/antigravity-ide"]),
+                               .shared(file, cleanup: [], trust: nil))
 
         case "qwen":
             let path = h + "/.qwen/settings.json"
