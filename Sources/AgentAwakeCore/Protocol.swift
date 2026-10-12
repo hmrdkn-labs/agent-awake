@@ -10,6 +10,7 @@ import Foundation
 ///            `Engine.waitGrace` so the user can answer remotely, then lets it sleep. Creates the session if needed.
 /// - `done`   finish; `kind` decides the ping.
 /// - `list`, `show` (app only: open the setup window).
+/// - `strain` current thermal/memory strain and whether agents should hold new work (`holding`).
 public struct Request: Codable {
     public var cmd: String
     public var name: String?
@@ -57,8 +58,11 @@ public struct Response: Codable {
     public var ok: Bool
     public var error: String?
     public var sessions: [SessionInfo]?
-    public init(ok: Bool, error: String? = nil, sessions: [SessionInfo]? = nil) {
-        self.ok = ok; self.error = error; self.sessions = sessions
+    public var strain: Strain?
+    /// Agents should hold new tool calls (the hook gate waits while this is true).
+    public var holding: Bool?
+    public init(ok: Bool, error: String? = nil, sessions: [SessionInfo]? = nil, strain: Strain? = nil, holding: Bool? = nil) {
+        self.ok = ok; self.error = error; self.sessions = sessions; self.strain = strain; self.holding = holding
     }
 }
 

@@ -20,6 +20,14 @@ public struct Config: Codable, Equatable {
     /// Show the agent's prompt as the session title (in the menu and in pings). Off: project folder only,
     /// because prompts can hold private text and pings pass through third-party servers.
     public var taskTitles: Bool?
+    /// Agents hold new tool calls while the Mac is hot or low on memory (default on).
+    public var holdWhenStrained: Bool?
+    /// What to do with processes agents started (builds, tests) when memory is almost full.
+    public var memoryRelief: MemoryRelief?
+
+    /// `pause`: stop the largest agent-started process until memory recovers, then continue it.
+    /// `kill`: end it (the agent sees its command fail). `none`: only hold and ping.
+    public enum MemoryRelief: String, Codable, CaseIterable { case none, pause, kill }
 
     public enum PingWhen: String, Codable, CaseIterable { case away, always, never }
     public struct Bark: Codable, Equatable {
@@ -45,6 +53,8 @@ public struct Config: Codable, Equatable {
     public var effectivePingWhen: PingWhen { pingWhen ?? .away }
     public var effectiveAwayAfter: Double { (awayAfterMinutes ?? 5) * 60 }
     public var effectiveTaskTitles: Bool { taskTitles ?? false }
+    public var effectiveHoldWhenStrained: Bool { holdWhenStrained ?? true }
+    public var effectiveMemoryRelief: MemoryRelief { memoryRelief ?? .pause }
 
     public static func load() -> Config {
         var c = readFile()
