@@ -102,13 +102,12 @@ spctl --assess --type execute "$APP"
 spctl --assess --type open --context context:primary-signature "$DMG"
 
 if ! gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
+  # Notes: this version's CHANGELOG section, then how to install.
+  changes=$(awk -v v="## $VERSION " 'index($0, v) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md)
+  [ -n "$changes" ] || { log "no CHANGELOG.md section for $VERSION"; exit 1; }
   gh release create "v$VERSION" "$DMG" --repo "$REPO" --title "Agent Awake $VERSION" --notes-file - <<EOF
 Keeps your Mac awake while AI coding agents work, lets it sleep when they finish, and pings your phone.
-
-- One-click hooks for Claude Code, Codex, Cursor, Gemini CLI, Antigravity, GitHub Copilot, OpenCode and 12 more agents
-- Pings when an agent is done, needs you, or fails: on your phone while you're away, on your Mac while you're at it
-- ntfy, Bark, Pushover, Telegram, Discord and Slack
-- Optional: keep working with the lid closed, with battery and heat safety stops
+$changes
 
 Open the DMG, drag Agent Awake to Applications, and open it. Signed with Developer ID and notarized by Apple.
 Requires macOS 13 or later.

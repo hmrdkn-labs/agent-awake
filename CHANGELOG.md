@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 (2026-10-12)
 
 - Heat and memory awareness. When the Mac runs hot or low on memory, agents wait before their next tool call
   until it recovers, and processes they started run at background priority. When memory is almost full, the
@@ -8,6 +8,7 @@
 - `agentawake strain [--wait]` for orchestrators and scripts.
 - Keep awake presets also keep the screen on; agent work lets it sleep and lock.
 - Existing hooks need Connect again for the new wait; Codex asks to trust the changed hook once.
+  Upgrading: open Settings → Agents and press Connect on agents marked out of date.
 
 ## 0.1.0 (2026-10-11)
 
