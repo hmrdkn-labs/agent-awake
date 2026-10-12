@@ -12,6 +12,10 @@ usage:
   agentawake agents                         supported agents and whether they're connected
   agentawake connect|disconnect <agent>     add or remove Agent Awake's hooks for one agent
   agentawake settings [agents|notifications|general]   open the Settings window
+  agentawake strain [--wait [--timeout 30m]]
+                                            heat and memory; with --wait, blocks while agents should hold
+                                            (for orchestrators: run it before starting more agents).
+                                            Exits 0 when clear, 75 if still strained after --timeout
   agentawake hook  <agent> <event>          for agent hooks: reads the agent's JSON payload on stdin;
                                             silent, never fails, always exits 0
 timeout = max silence before the session is declared stuck, pinged and released (0 = never).
@@ -70,16 +74,15 @@ func readStdin(seconds: Double, limit: Int = 32 << 20) -> Data? {
     return out.count > limit ? nil : out
 }
 
-/// `agentawake hook <agent> <event>`: must never block or alter the agent. Silent, fast, exits 0 whatever happens.
+/// `agentawake hook <agent> <event>`: must never break or alter the agent. Silent, fast, exits 0 whatever happens;
+/// the agent's tool gate event (`HookGate`) is the one hook that may wait, while the app says the Mac is strained.
 func runHook(_ a: [String]) -> Never {
     signal(SIGPIPE, SIG_IGN)
     signal(SIGALRM) { _ in _exit(0) }   // last resort if the app hangs mid-reply
     alarm(4)
     guard a.count >= 2 else { exit(0) }
     let agent = a[0], event = a[1]
-    if let out = HookAdapter.stdout(agent: agent, event: event) {
-        out.utf8CString.withUnsafeBufferPointer { _ = write(1, $0.baseAddress, $0.count - 1) }
-    }
+    if let out = HookAdapter.stdout(agent: agent, event: event) { writeStdout(out) }
     guard var payload = readStdin(seconds: 2) else { exit(0) }
     if payload.isEmpty, a.count > 2 { payload = Data(a[2].utf8) }   // older Cursor CLIs pass the payload in argv
     var env = ProcessInfo.processInfo.environment
@@ -87,7 +90,19 @@ func runHook(_ a: [String]) -> Never {
     let requests = HookAdapter.requests(agent: agent, event: event, payload: payload, env: env,
                                         agentPID: HookAdapter.agentPID(from: getppid()), config: Config.load())
     for r in requests { _ = try? Client.send(r) }
+    if let budget = HookGate.budget(agent: agent, event: event) {
+        alarm(HookGate.alarm(budget: budget))
+        let hold = HookGate.wait(beats: requests.filter { $0.cmd == "beat" }, budget: budget, send: { try Client.send($0) })
+        if let note = HookGate.note(hold),
+           let out = HookAdapter.heldStdout(agent: agent, event: event, payload: payload, env: env, note: note) {
+            writeStdout(out)
+        }
+    }
     exit(0)
+}
+
+func writeStdout(_ s: String) {
+    s.utf8CString.withUnsafeBufferPointer { _ = write(1, $0.baseAddress, $0.count - 1) }
 }
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -97,6 +112,7 @@ if cmd == "hook" { runHook(args) }
 
 var timeout: Double?
 var message: String?
+var wait = false
 var command: [String] = []
 var positional: [String] = []
 var i = 0
@@ -110,6 +126,7 @@ while i < args.count {
         guard i + 1 < args.count else { fail("bad --message", code: 2) }
         message = args[i + 1]; i += 2; continue
     }
+    if args[i] == "--wait" { wait = true; i += 1; continue }
     positional.append(args[i]); i += 1
 }
 
@@ -125,6 +142,18 @@ case "list":
     }
 case "settings":
     _ = call(Request(cmd: "settings", name: positional.first))
+case "strain":
+    // Orchestrators gate on this; if the app isn't running there is nothing to wait for.
+    let ask = { (try? Client.send(Request(cmd: "strain"))) ?? Response(ok: false) }
+    var r = ask()
+    if wait {
+        let deadline = Date().addingTimeInterval(timeout ?? SessionStore.defaultTimeout)
+        while r.holding == true && Date() < deadline { sleep(5); r = ask() }
+    }
+    guard let s = r.strain else { print("unknown (Agent Awake isn't running)"); exit(0) }
+    let swap = s.swapUsed.map { " swap=" + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .memory) } ?? ""
+    print("\(s.reason ?? "normal")\tthermal=\(s.thermal)\tmemory=\(s.memory)\(swap)\tholding=\(r.holding == true)")
+    exit(r.holding == true && wait ? 75 : 0)
 case "agents":
     for i in Integrations.all() {
         let s: String

@@ -31,6 +31,8 @@ public enum HookAdapter {
         let id = owner.id
         let sessionID = self.sessionID(p, agent: id)
         let cwd = self.cwd(p, env: env)
+        // Our plugins also gate subagent tools whose parent they can't name: that call only waits.
+        if spec.gate == "gate", event == "gate", sessionID == nil, p.str("parent_session_id") == nil { return [] }
 
         // Notification events carry many kinds; only a few mean the user is needed.
         if action == .needsYou, event.lowercased() == "notification", let allowed = notificationTypes[agent] {
@@ -115,6 +117,18 @@ public enum HookAdapter {
         case ("antigravity", _): return "{}"
         default: return nil
         }
+    }
+
+    /// What to print after the tool gate held a call (`note` from `HookGate.note`): a message for the user where the
+    /// agent documents one on an undecided pre-tool reply (Claude, Codex, Gemini: `systemMessage`); nil = nothing.
+    /// Claude-format hooks running inside Cursor or Devin print nothing: Cursor reads any JSON there as a decision.
+    public static func heldStdout(agent: String, event: String, payload: Data, env: [String: String], note: String) -> String? {
+        guard ["claude", "codex", "gemini"].contains(agent), AgentCatalog.spec(agent)?.gate == event else { return nil }
+        if agent == "claude" {
+            let obj = (try? JSONSerialization.jsonObject(with: payload)) as? [String: Any] ?? [:]
+            if claudeHost(Payload(obj), env) != nil { return nil }
+        }
+        return "{\"systemMessage\":\(JSONValue.quote(note))}"
     }
 
     static let shells: Set<String> = ["sh", "bash", "zsh", "dash", "fish", "env", "ksh", "tcsh", "csh"]

@@ -44,11 +44,12 @@ struct PanelView: View {
                 Text(statusLine).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Text(awake ? "AWAKE" : "IDLE")
+            Text(model.holding ? "HOLDING" : awake ? "AWAKE" : "IDLE")
                 .font(.caption2.weight(.bold)).tracking(0.8)
                 .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(awake ? Brand.amber : Color.secondary.opacity(0.18)))
-                .foregroundStyle(awake ? Color.black.opacity(0.8) : Color.secondary)
+                .background(Capsule().fill(model.holding ? Color.orange : awake ? Brand.amber : Color.secondary.opacity(0.18)))
+                .foregroundStyle(awake || model.holding ? Color.black.opacity(0.8) : Color.secondary)
+                .help(model.holding ? "Agents wait before their next step until the Mac recovers" : "")
         }
         .padding(14)
         .background(
@@ -58,6 +59,7 @@ struct PanelView: View {
     }
 
     private var statusLine: String {
+        if let reason = model.strain.reason { return model.holding ? "\(reason) · agents holding" : reason }
         let n = model.agents.count
         if n > 0 { return "\(n) agent\(n == 1 ? "" : "s") working" }
         if let m = model.manual {

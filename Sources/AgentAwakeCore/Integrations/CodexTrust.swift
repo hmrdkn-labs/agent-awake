@@ -1,12 +1,14 @@
+import CryptoKit
 import Foundation
 
 /// Codex skips user hooks until the user trusts them. Trust is stored in `~/.codex/config.toml` as
-/// `[hooks.state."<abs hooks.json>:<snake_event>:<group>:<handler>"]` with a `trusted_hash`. We only read it:
-/// trusting is the user's security decision (Codex CLI: "Trust all and continue", or /hooks).
+/// `[hooks.state."<abs hooks.json>:<snake_event>:<group>:<handler>"]` with a `trusted_hash` of the handler; editing
+/// the handler (a new timeout, for instance) changes the hash and Codex skips it again until re-trusted. We only
+/// read it: trusting is the user's security decision (Codex CLI: "Trust all and continue", or /hooks).
 enum CodexTrust {
-    struct State { var trusted: Set<String> = []; var disabled: Set<String> = []; var hooksOff = false }
+    struct State { var trusted: [String: String] = [:]; var disabled: Set<String> = []; var hooksOff = false }
 
-    /// Keys of the `hooks.state` tables that hold a `trusted_hash`, those with `enabled = false`, and whether
+    /// `trusted_hash` per `hooks.state` key, the keys with `enabled = false`, and whether
     /// `[features] hooks = false` (or the older `codex_hooks = false`) turns hooks off.
     static func state(configToml text: String) -> State {
         var state = State()
@@ -27,7 +29,7 @@ enum CodexTrust {
             guard parts.count == 2 else { continue }
             let value = parts[1].split(separator: "#").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
             if let key = table {
-                if parts[0] == "trusted_hash", value.count > 2 { state.trusted.insert(key) }
+                if parts[0] == "trusted_hash", value.count > 2 { state.trusted[key] = String(value.dropFirst().dropLast()) }
                 if parts[0] == "enabled", value == "false" { state.disabled.insert(key) }
             } else if inFeatures, parts[0] == "hooks" || parts[0] == "codex_hooks", value == "false" {
                 state.hooksOff = true
@@ -58,19 +60,36 @@ enum CodexTrust {
         return out
     }
 
-    /// Trust keys of our current entries: `<path>:<snake_event>:<group index>:<handler index>`.
-    static func keys(for file: HookFile, hooksPath: String) throws -> [String] {
+    /// Trust keys of our current entries (`<path>:<snake_event>:<group index>:<handler index>`) with the hash Codex
+    /// stores once the user trusts that entry.
+    static func keys(for file: HookFile, hooksPath: String) throws -> [(key: String, hash: String)] {
         guard let doc = try file.load(), let events = HookFile.object(at: file.container, in: doc) else { return [] }
-        var keys: [String] = []
+        var keys: [(key: String, hash: String)] = []
         for (event, _) in file.entries {
-            guard let groups = events[event]?.arrayValue, let wanted = file.desiredCommand(event) else { continue }
+            guard let groups = events[event]?.arrayValue else { continue }
             outer: for (g, group) in groups.enumerated() {
-                for (h, handler) in (group["hooks"]?.arrayValue ?? []).enumerated() where HookFile.command(of: handler) == wanted {
-                    keys.append("\(hooksPath):\(snake(event)):\(g):\(h)")
+                for (h, handler) in (group["hooks"]?.arrayValue ?? []).enumerated() where file.isCurrent(handler, event: event) {
+                    keys.append(("\(hooksPath):\(snake(event)):\(g):\(h)", hash(event: event, handler: handler)))
                     break outer
                 }
             }
         }
         return keys
+    }
+
+    /// Codex's trust hash of one command handler in a group without a matcher (ours): `sha256:` + hex SHA-256 of the
+    /// compact, key-sorted JSON `{"event_name", "hooks": [{type, command, timeout, async}]}`, the timeout defaulting
+    /// to 600 s (1 s for SessionEnd and Interrupt). Not documented; checked against hashes Codex 0.162 wrote.
+    static func hash(event: String, handler: JSONValue) -> String {
+        let snake = snake(event)
+        let fallback = snake == "session_end" || snake == "interrupt" ? 1 : 600
+        let timeout = handler["timeout"].flatMap { if case .number(let n) = $0 { return Int(n) } else { return nil } } ?? fallback
+        let normalized: [String: Any] = [
+            "event_name": snake,
+            "hooks": [["type": "command", "command": HookFile.command(of: handler) ?? "", "timeout": timeout,
+                       "async": handler["async"] == .bool(true)]],
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: normalized, options: [.sortedKeys, .withoutEscapingSlashes])) ?? Data()
+        return "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }

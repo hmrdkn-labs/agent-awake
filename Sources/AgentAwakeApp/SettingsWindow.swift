@@ -237,6 +237,21 @@ struct GeneralTab: View {
                 Text("Turns itself off when work ends, at 10% battery, or when the Mac gets hot.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("When the Mac is hot or low on memory") {
+                Toggle("Agents wait before their next step until it recovers", isOn: Binding(
+                    get: { model.config.effectiveHoldWhenStrained },
+                    set: { var c = model.config; c.holdWhenStrained = $0; model.saveConfig(c) }))
+                Picker("When memory is almost full", selection: Binding(
+                    get: { model.config.effectiveMemoryRelief },
+                    set: { var c = model.config; c.memoryRelief = $0; model.saveConfig(c) })) {
+                    Text("Pause the largest process an agent started").tag(Config.MemoryRelief.pause)
+                    Text("Stop the largest process an agent started").tag(Config.MemoryRelief.kill)
+                    Text("Only notify me").tag(Config.MemoryRelief.none)
+                }
+                Text("Only builds, tests and other processes your agents started are touched, never the agents or your apps. "
+                     + "While it's hot they run at low priority. Paused processes continue when memory recovers.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if model.herdrPath != nil {
                 Toggle("Follow herdr panes", isOn: $model.herdrWatch)
             }

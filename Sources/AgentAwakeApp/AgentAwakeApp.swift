@@ -8,6 +8,9 @@ final class Model: ObservableObject {
 
     @Published var sessions: [SessionInfo] = []
     @Published var error: String?
+    /// Heat and memory, and whether agents are holding because of them.
+    @Published var strain = Strain.normal
+    @Published var holding = false
     @Published var helper: HelperState = HelperInstaller.state()
     /// "Stay awake with the lid closed" (needs the privileged helper).
     @Published var lidMode = UserDefaults.standard.bool(forKey: "lidMode") {
@@ -57,6 +60,7 @@ final class Model: ObservableObject {
     private let lid: LidGuard
     private let server: SocketServer
     private let assertions: AssertionWatcher
+    let strainGuard: StrainGuard
     private var herdr: HerdrWatcher?
     private var poll: Timer?
 
@@ -93,9 +97,16 @@ final class Model: ObservableObject {
             }
             return e.handle(req)
         }
+        let g = StrainGuard(engine: e, sensor: LiveStrainSensor(), relief: LiveRelief(), notifier: router)
+        strainGuard = g
+        e.strainReport = { [g] in g.report() }
         e.onChange = { [weak self] list in
             DispatchQueue.main.async { self?.apply(list) }
         }
+        g.onChange = { [weak self] s, holding in
+            DispatchQueue.main.async { self?.strain = s; self?.holding = holding }
+        }
+        g.start()
         do { try server.start(); e.start() } catch SocketError.alreadyRunning {
             // Another copy is running: bring up its window instead of starting a second daemon.
             _ = try? Client.send(Request(cmd: "show"))
@@ -229,6 +240,11 @@ enum CLIInstaller {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !UserDefaults.standard.bool(forKey: "welcomed") { WelcomeWindow.show() }
+    }
+
+    /// Nothing an agent started stays paused or throttled after Agent Awake quits.
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { Model.shared.strainGuard.releaseAll() }
     }
 
     /// Opening the app again (Finder, Spotlight, Dock) shows the welcome window, since a menu bar

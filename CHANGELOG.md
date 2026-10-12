@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Heat and memory awareness. When the Mac runs hot or low on memory, agents wait before their next tool call
+  until it recovers, and processes they started run at background priority. When memory is almost full, the
+  largest process an agent started is paused until memory recovers (or stopped, or only reported).
+- `agentawake strain [--wait]` for orchestrators and scripts.
+- Keep awake presets also keep the screen on; agent work lets it sleep and lock.
+- Existing hooks need Connect again for the new wait; Codex asks to trust the changed hook once.
+
 ## 0.1.0 (2026-10-11)
 
 First release.
@@ -14,7 +23,6 @@ First release.
 - Pings name only the agent and project folder unless you opt in to task titles, since prompts can hold
   private text.
 - A session that needs you keeps the Mac awake 15 minutes so you can answer remotely.
-- Keep awake presets (1h, 2h, 4h, until off) that also keep the screen on; agent work lets it sleep and lock.
 - Quiet agents still running a build stay awake; agents whose process exited are released at once.
 - Optional lid-closed mode through a privileged helper, with battery and heat safety stops.
 - `agentawake` command: `run`, `begin`/`beat`/`done`, `list`, `agents`, `connect`/`disconnect`, `settings`.

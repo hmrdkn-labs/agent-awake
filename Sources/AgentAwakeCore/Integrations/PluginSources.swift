@@ -3,8 +3,10 @@ import Foundation
 /// Plugin files for agents whose extension point is code running inside the agent (OpenCode, Kilo, Amp, omp, pi).
 /// Each one reports our action names (start, beat, needsYou, stop, failed, end) by spawning
 /// `agentawake hook <agent> <action>` detached with `{session_id, cwd, prompt?, parent_session_id?, message?,
-/// status?}` on stdin. It never awaits the child, catches every error, and skips subagent turns (their activity
-/// only keeps the parent session alive).
+/// status?}` on stdin. It never awaits those children, catches every error, and skips subagent turns (their activity
+/// only keeps the parent session alive). The one exception is the tool gate (`HookGate`): where the host awaits a
+/// before-tool callback that can return "no decision", the plugin awaits `agentawake hook <agent> gate` there, at
+/// most `gateMs`, and then returns nothing, so a strained Mac holds new tool calls without the tool ever being denied.
 enum PluginSources {
     static func header(_ name: String, _ agent: String) -> String {
         """
@@ -13,10 +15,17 @@ enum PluginSources {
         """
     }
 
-    /// The detached, fire-and-forget spawn shared by every plugin. `typed` adds TypeScript annotations.
+    /// How long a plugin awaits the gate hook: past the CLI's own deadline (`HookGate.alarm`), within the host's limit.
+    static func gateMs(_ agent: String) -> Int? {
+        guard let spec = AgentCatalog.spec(agent), spec.gate != nil else { return nil }
+        return Int((HookGate.budget(for: spec) + 8) * 1000)
+    }
+
+    /// The detached, fire-and-forget spawn shared by every plugin, plus the awaited `gate` for gated agents. `typed`
+    /// adds TypeScript annotations.
     static func sender(bin: String, agent: String, typed: Bool) -> String {
         let sig = typed ? "action: string, payload: Record<string, unknown>): void" : "action, payload)"
-        return """
+        var out = """
         import { spawn } from "node:child_process"
         import { existsSync } from "node:fs"
 
@@ -35,6 +44,38 @@ enum PluginSources {
           } catch {}
         }
         """
+        guard let gateMs = gateMs(agent) else { return out }
+        let gateSig = typed
+            ? "payload: Record<string, unknown>, signal?: AbortSignal): Promise<void>"
+            : "payload, signal)"
+        out += "\n\n" + """
+        const GATE_MS = \(gateMs)
+
+        // Before a tool runs: waits while Agent Awake holds new work (Mac hot or low on memory), then lets the tool run.
+        // Never throws and never decides anything; gives up at GATE_MS or when the agent aborts.
+        function gate(\(gateSig) {
+          return new Promise\(typed ? "<void>" : "")((resolve) => {
+            let timer\(typed ? ": ReturnType<typeof setTimeout> | undefined" : "")
+            const done = () => {
+              clearTimeout(timer)
+              resolve()
+            }
+            try {
+              if (!existsSync(BIN) || signal?.aborted) return done()
+              timer = setTimeout(done, GATE_MS)
+              signal?.addEventListener?.("abort", done, { once: true })
+              const child = spawn(BIN, ["hook", AGENT, "gate"], { stdio: ["pipe", "ignore", "ignore"] })
+              child.on("error", done)
+              child.on("exit", done)
+              child.stdin.on("error", () => {})
+              child.stdin.end(JSON.stringify(payload))
+            } catch {
+              done()
+            }
+          })
+        }
+        """
+        return out
     }
 
     /// OpenCode (v1 `server()` and v2 `setup()` from one default export) and Kilo (v1 API).
@@ -161,6 +202,14 @@ enum PluginSources {
             prompt(id, text) {
               if (typeof id === "string" && text) prompts.set(id, text)
             },
+            // Awaited before every tool; a subagent's tool keeps its parent alive while it's held.
+            async gate(id) {
+              try {
+                if (typeof id !== "string") return await gate({})
+                const parent = await parentOf(id)
+                await gate(parent ? { ...base(id), parent_session_id: parent } : base(id))
+              } catch {}
+            },
           }
         }
 
@@ -183,6 +232,10 @@ enum PluginSources {
                   }
                 } catch {}
               })()
+              // OpenCode 2's awaited before-tool hook; returning nothing leaves the call unchanged.
+              Promise.resolve(ctx.tool?.hook?.("execute.before", async (ev) => {
+                await t.gate(ev?.sessionID)
+              })).catch(() => {})
             } catch {}
             return () => controller.abort()
           },
@@ -202,6 +255,9 @@ enum PluginSources {
                 try {
                   t.prompt(info?.sessionID, promptText(output?.parts))
                 } catch {}
+              },
+              "tool.execute.before": async (info) => {
+                await t.gate(info?.sessionID)
               },
             }
           },
@@ -412,6 +468,16 @@ enum PluginSources {
             send("stop", base(id, ctx))
           })
           on("session_shutdown", (_event, ctx, id) => send("end", base(id, ctx)))
+          // Awaited before every tool, subagents' too (those only wait). Returns nothing: no block, no new input.
+          try {
+            pi.on("tool_call", async (_event: any, ctx: any) => {
+              try {
+                const id = sessionOf(ctx)
+                await gate(id ? base(id, ctx) : {}, ctx?.signal)
+              } catch {}
+              return undefined
+            })
+          } catch {}
         }
 
         """#
@@ -482,6 +548,16 @@ enum PluginSources {
           on("session_shutdown", (event, ctx, id) => {
             if (event?.reason !== "reload") send("end", base(id, ctx))
           })
+          // Awaited before every tool, subagents' too (those only wait). Returns nothing: no block, no new input.
+          try {
+            pi.on("tool_call", async (_event: any, ctx: any) => {
+              try {
+                const id = sessionOf(ctx)
+                await gate(id ? base(id, ctx) : {}, ctx?.signal)
+              } catch {}
+              return undefined
+            })
+          } catch {}
         }
 
         """#

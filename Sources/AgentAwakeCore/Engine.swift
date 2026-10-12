@@ -24,6 +24,8 @@ public final class Engine {
     private var timer: DispatchSourceTimer?
     /// Called (on an arbitrary thread) whenever the session list changes.
     public var onChange: (([SessionInfo]) -> Void)?
+    /// Current strain and whether agents should hold; set by the app to its `StrainGuard`.
+    public var strainReport: () -> (Strain, Bool) = { (.normal, false) }
 
     public init(notifier: Notifier, power: PowerHolding = PowerAssertion(), probe: ProcessProbe = LiveProcessProbe(),
                 now: @escaping () -> Double = { Date().timeIntervalSince1970 }) {
@@ -82,6 +84,9 @@ public final class Engine {
 
     public func handle(_ r: Request) -> Response {
         switch r.cmd {
+        case "strain":
+            let (s, holding) = strainReport()
+            return Response(ok: true, strain: s, holding: holding)
         case "list":
             return Response(ok: true, sessions: store.list())
         case "begin":

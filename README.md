@@ -34,6 +34,9 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
   reply remotely, then sleeps.
 - **Not fooled by long builds.** A quiet agent that is still running a build or tests keeps the Mac
   awake. One whose process exited is let go at once, and one that is truly stuck gets you a ping.
+- **Backs off when the Mac struggles.** When it runs hot or low on memory, agents wait before their next
+  step until it recovers, and the builds they started drop to low priority. When memory is almost full, the
+  largest process an agent started is paused (or stopped, if you choose) before macOS starts killing apps.
 - **Lid closed (optional).** Keep agents running in your bag. A small privileged helper turns this on only
   while work runs, and turns it off if the battery reaches 10%, the Mac gets hot, or the app quits.
 - **Keep awake presets.** 1h, 2h, 4h, or until you turn it off. These also keep the screen on and unlocked,
@@ -89,6 +92,7 @@ agentawake beat  fix-login
 agentawake done  fix-login --message "PR ready"
 agentawake list                           # what's keeping the Mac awake
 agentawake agents                         # which agents are connected
+agentawake strain --wait && start-more   # orchestrators: wait while the Mac is hot or low on memory
 ```
 
 ## Pings
@@ -107,6 +111,27 @@ By default pings name only the agent and project folder ("Claude Code · shop is
 hold private text and pings pass through these services, so showing the prompt as the title is opt-in.
 Settings live in `~/.agent-awake/config.json` (mode 0600); `AGENT_AWAKE_NTFY_TOPIC` and
 `AGENT_AWAKE_NTFY_SERVER` override ntfy.
+
+## Heat and memory
+
+Agent Awake reads macOS's thermal pressure level and memory pressure level (no root, no permissions).
+
+| Mac | What happens |
+|---|---|
+| Running hot, or memory low | Agents wait before their next tool call until it recovers (up to 10 min per call, then they go on). Processes agents started run at background priority while it's hot. You get one ping when holding starts and one when it ends. |
+| Memory almost full | The largest process an agent started (a build, tests, a dev server over 256 MB) is paused, one every 30 s, and continued once memory is back to normal. Settings → General can stop it instead, or only notify. |
+
+Only processes your agents started are touched: never the agents themselves, your apps, or other users'
+processes. Nothing stays paused or slowed after Agent Awake quits.
+
+Waiting uses each agent's own pre-tool hook, so it works in Claude Code, Codex, Gemini CLI, Qwen Code,
+Factory Droid, Augment, GitHub Copilot, Devin Local, Kiro, Goose, Junie CLI, OpenCode, Kilo Code,
+oh-my-pi and pi. Antigravity, Cursor, Windsurf and Amp have no pre-tool hook that can wait without approving
+or denying the tool, so they aren't held; their builds are still slowed and paused. Hooks connected before
+this feature show as "out of date": Connect again (Codex then asks you to trust the changed hook once).
+
+Orchestrators and scripts can check before starting more work: `agentawake strain --wait` returns when
+the Mac is fine (exit 0), or after `--timeout` with exit 75 if it's still strained.
 
 ## Lid-closed mode
 

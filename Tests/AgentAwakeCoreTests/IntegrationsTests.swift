@@ -258,18 +258,30 @@ final class IntegrationsTests: XCTestCase {
         XCTAssertTrue(message.contains("Trust all and continue"))
 
         // Trust all but one: still needs action. Then all: connected. Codex keys trust by the realpath
-        // (/private/var/… for this temp folder), as `codex app-server` hooks/list reports.
+        // (/private/var/… for this temp folder), as `codex app-server` hooks/list reports, and stores the handler's hash.
         let hooksPath = FileOps.canonical(path(".codex/hooks.json"))
-        var toml = read(".codex/config.toml")!
-        for event in events("codex").dropLast() {
-            toml += "\n[hooks.state.\"\(hooksPath):\(CodexTrust.snake(event)):0:0\"]\ntrusted_hash = \"sha256:abc\"\n"
+        let ours = { (event: String) in doc["hooks"]![event]!.arrayValue![0]["hooks"]!.arrayValue![0] }
+        let entry = { (event: String, hash: String) in
+            "\n[hooks.state.\"\(hooksPath):\(CodexTrust.snake(event)):0:0\"]\ntrusted_hash = \"\(hash)\"\n"
         }
+        var toml = read(".codex/config.toml")!
+        for event in events("codex").dropLast() { toml += entry(event, CodexTrust.hash(event: event, handler: ours(event))) }
         try write(".codex/config.toml", toml)
         if case .needsAction = codex.status() {} else { XCTFail("one hook still untrusted") }
-        toml += "\n[hooks.state.\"\(hooksPath):session_end:0:0\"]\ntrusted_hash = \"sha256:def\"\n"
-        try write(".codex/config.toml", toml)
+        let trustedAll = toml + entry("SessionEnd", CodexTrust.hash(event: "SessionEnd", handler: ours("SessionEnd")))
+        try write(".codex/config.toml", trustedAll)
         XCTAssertEqual(codex.status(), .connected)
-        XCTAssertEqual(read(".codex/config.toml"), toml, "we never write trust ourselves")
+        XCTAssertEqual(read(".codex/config.toml"), trustedAll, "we never write trust ourselves")
+
+        // Trust given to an older handler (the short-timeout PreToolUse before the tool gate) doesn't count: Codex
+        // skips a changed hook until it's trusted again.
+        var old = ours("PreToolUse"); old.set("timeout", .int(5))
+        try write(".codex/config.toml", toml.replacingOccurrences(
+            of: CodexTrust.hash(event: "PreToolUse", handler: ours("PreToolUse")),
+            with: CodexTrust.hash(event: "PreToolUse", handler: old))
+            + entry("SessionEnd", CodexTrust.hash(event: "SessionEnd", handler: ours("SessionEnd"))))
+        if case .needsAction = codex.status() {} else { XCTFail("a changed hook needs trust again") }
+        toml = trustedAll
 
         // A disabled hook or hooks switched off need the user again.
         try write(".codex/config.toml", toml + "\n[features]\nhooks = false\n")
@@ -283,6 +295,20 @@ final class IntegrationsTests: XCTestCase {
         XCTAssertEqual(CodexTrust.snake("UserPromptSubmit"), "user_prompt_submit")
         XCTAssertEqual(CodexTrust.snake("PreToolUse"), "pre_tool_use")
         XCTAssertEqual(CodexTrust.snake("Stop"), "stop")
+    }
+
+    /// Hashes Codex 0.162 itself wrote into a real config.toml for our earlier (5 s) PreToolUse and herdr's SessionStart.
+    func testCodexTrustHashMatchesWhatCodexStores() {
+        let home = "/Users/hamardikan-mac"
+        let pre = JSONValue.obj([("type", .string("command")),
+                                 ("command", .string(Integrations.hookCommand(agent: "codex", event: "PreToolUse", home: home))),
+                                 ("timeout", .int(5))])
+        XCTAssertEqual(CodexTrust.hash(event: "PreToolUse", handler: pre),
+                       "sha256:d0664dbb4d1db120bbea07a2f144093971d25c93930806c8b97d1c94d457d245")
+        let herdr = JSONValue.obj([("command", .string("bash '\(home)/.codex/herdr-agent-state.sh' session")),
+                                   ("timeout", .int(10)), ("type", .string("command"))])
+        XCTAssertEqual(CodexTrust.hash(event: "SessionStart", handler: herdr),
+                       "sha256:989a5da68119c42299eecde6710320d525a2b581ab0d13258e215d0005539ce7")
     }
 
     // MARK: Other shared formats
@@ -453,11 +479,24 @@ final class IntegrationsTests: XCTestCase {
         try write(".agent-awake/bin/agentawake", "#!/bin/sh\nf=$(mktemp \"\(logs)/call.XXXXXX\")\n{ printf '%s %s ' \"$2\" \"$3\"; cat; } > \"$f\" && mv \"$f\" \"$f.done\"\n")
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path(".agent-awake/bin/agentawake"))
 
+        // Awaits a gate call and checks the hook had finished (it's awaited, not detached) by the time it returned.
+        let awaited = """
+        const { readdirSync, readFileSync } = await import("node:fs")
+        const gates = () => readdirSync("hook-logs").filter((f) => f.endsWith(".done") && readFileSync("hook-logs/" + f, "utf8").split(" ")[1] === "gate").length
+        const awaited = async (call) => {
+          const before = gates()
+          const result = await call()
+          if (result !== undefined) throw new Error("a gate must not decide anything")
+          if (gates() !== before + 1) throw new Error("the gate returned before its hook finished")
+        }
+
+        """
         let harness: [String: String] = [
             "opencode": """
             const m = await import(process.argv[2])
             const client = { session: { get: async ({ path }) => ({ data: { id: path.id, parentID: path.id === "child" ? "root" : undefined } }) } }
             const h = await m.default.server({ directory: "/proj", client })
+            await awaited(() => h["tool.execute.before"]({ tool: "bash", sessionID: "child", callID: "c1" }, { args: {} }))
             await h["chat.message"]({ sessionID: "root" }, { parts: [{ type: "text", text: "Fix the bug" }] })
             const ev = (type, properties) => h.event({ event: { type, properties } })
             ev("session.status", { sessionID: "root", status: { type: "busy" } })
@@ -466,10 +505,13 @@ final class IntegrationsTests: XCTestCase {
             ev("session.status", { sessionID: "child", status: { type: "idle" } })
             ev("session.status", { sessionID: "root", status: { type: "idle" } })
             ev("session.deleted", { info: { id: "root" } })
+            let v2gate
             const v2 = { location: { directory: "/v2" }, session: { get: async () => ({ parentID: null }) },
+              tool: { hook: (name, cb) => { if (name === "execute.before") v2gate = cb } },
               event: { subscribe: async function* () { yield { type: "session.status", data: { sessionID: "two", status: { type: "busy" } } };
                                                        yield { type: "session.error", data: { sessionID: "two", error: { name: "APIError", data: { message: "overloaded" } } } } } } }
             m.default.setup(v2)
+            await awaited(() => v2gate({ tool: "bash", sessionID: "two", input: {} }))
             await new Promise((r) => setTimeout(r, 300))
             """,
             "omp": """
@@ -481,6 +523,8 @@ final class IntegrationsTests: XCTestCase {
             on.before_agent_start({ prompt: "Do it" }, ctx); on.agent_start({}, ctx); on.agent_start({}, sub)
             on.tool_approval_requested({ toolName: "bash" }, ctx); on.session_stop({}, sub); on.session_stop({}, ctx)
             on.session_shutdown({}, ctx)
+            await awaited(() => on.tool_call({ toolName: "bash" }, ctx))
+            await awaited(() => on.tool_call({ toolName: "bash" }, sub))
             await new Promise((r) => setTimeout(r, 300))
             """,
             "pi": """
@@ -491,6 +535,7 @@ final class IntegrationsTests: XCTestCase {
             on.before_agent_start({ prompt: "Go" }, ctx); on.agent_start({}, ctx)
             on.ui_prompt_start({ title: "Pick one" }, ctx); on.agent_before_settle({ outcome: "error" }, ctx)
             on.agent_settled({ aborted: false }, ctx); on.session_shutdown({ reason: "reload" }, ctx); on.session_shutdown({ reason: "quit" }, ctx)
+            await awaited(() => on.tool_call({ toolName: "bash" }, ctx))
             await new Promise((r) => setTimeout(r, 300))
             """,
             "amp": """
@@ -518,18 +563,23 @@ final class IntegrationsTests: XCTestCase {
                 #"opencode end {"session_id":"root","cwd":"/proj"}"#,
                 #"opencode start {"session_id":"two","cwd":"/v2"}"#,
                 #"opencode failed {"session_id":"two","cwd":"/v2","message":"overloaded"}"#,
+                #"opencode gate {"session_id":"child","cwd":"/proj","parent_session_id":"root"}"#,
+                #"opencode gate {"session_id":"two","cwd":"/v2"}"#,
             ],
             "omp": [
                 #"omp start {"session_id":"s1","cwd":"/proj","prompt":"Do it"}"#,
                 #"omp needsYou {"session_id":"s1","cwd":"/proj","message":"Approve bash"}"#,
                 #"omp stop {"session_id":"s1","cwd":"/proj"}"#,
                 #"omp end {"session_id":"s1","cwd":"/proj"}"#,
+                #"omp gate {"session_id":"s1","cwd":"/proj"}"#,
+                #"omp gate {}"#,
             ],
             "pi": [
                 #"pi start {"session_id":"p1","cwd":"/proj","prompt":"Go"}"#,
                 #"pi needsYou {"session_id":"p1","cwd":"/proj","message":"Pick one"}"#,
                 #"pi failed {"session_id":"p1","cwd":"/proj","message":"The run ended with an error"}"#,
                 #"pi end {"session_id":"p1","cwd":"/proj"}"#,
+                #"pi gate {"session_id":"p1","cwd":"/proj"}"#,
             ],
             "amp": [
                 "amp start {\"session_id\":\"T1\",\"cwd\":\"\(realHome)\",\"prompt\":\"Ship it\"}",
@@ -549,7 +599,7 @@ final class IntegrationsTests: XCTestCase {
                 try FileManager.default.copyItem(atPath: file, toPath: mjs)
                 file = mjs
             }
-            try write("harness-\(id).mjs", script)
+            try write("harness-\(id).mjs", awaited + script)
             let r = try run(bun, [path("harness-\(id).mjs"), file], cwd: home)
             XCTAssertEqual(r.status, 0, "\(id): \(r.err)")
             XCTAssertEqual(r.out, "", "\(id) plugins print nothing")

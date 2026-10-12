@@ -34,9 +34,10 @@ struct HookFile {
         for member in events {
             let event = member.key, value = member.value
             for element in value.arrayValue ?? [] {
-                for command in Self.commands(in: element) where command.contains(Self.marker) {
+                for handler in Self.handlers(in: element) {
+                    guard let command = Self.command(of: handler), command.contains(Self.marker) else { continue }
                     p.ours += 1
-                    if command == desiredCommand(event), !p.exact.contains(event) { p.exact.insert(event) } else { p.stale += 1 }
+                    if isCurrent(handler, event: event), !p.exact.contains(event) { p.exact.insert(event) } else { p.stale += 1 }
                 }
             }
         }
@@ -64,9 +65,9 @@ struct HookFile {
             var changed = false
             items = items.compactMap { element in
                 // Keep everything that isn't ours, and the first copy of our current command for this event.
-                let kept = strip(element) { command in
-                    guard command.contains(Self.marker) else { return true }
-                    guard command == desiredCommand(event), !found.contains(event) else { return false }
+                let kept = strip(element) { handler in
+                    guard let command = Self.command(of: handler), command.contains(Self.marker) else { return true }
+                    guard isCurrent(handler, event: event), !found.contains(event) else { return false }
                     found.insert(event)
                     return true
                 }
@@ -100,7 +101,7 @@ struct HookFile {
         var touched = false
         for index in pairs.indices {
             guard let items = pairs[index].value.arrayValue else { continue }
-            let kept = items.compactMap { strip($0) { !$0.contains(Self.marker) } }
+            let kept = items.compactMap { strip($0) { !(Self.command(of: $0)?.contains(Self.marker) ?? false) } }
             if kept != items { pairs[index].value = .array(kept); touched = true }
         }
         guard touched else { return }
@@ -137,7 +138,20 @@ struct HookFile {
     // MARK: Helpers
 
     func desiredCommand(_ event: String) -> String? {
-        entries.first { $0.event == event }.flatMap { Self.commands(in: $0.entry).first }
+        desiredHandler(event).flatMap(Self.command(of:))
+    }
+
+    /// Our handler (or flat entry) for `event`, as connect writes it.
+    func desiredHandler(_ event: String) -> JSONValue? {
+        entries.first { $0.event == event }.flatMap { Self.handlers(in: $0.entry).first }
+    }
+
+    /// An existing handler of ours is current when it has every field we write, with our values; fields the agent
+    /// adds are fine. So a changed timeout or `async` (the tool gate's long synchronous wait) makes an old one stale,
+    /// and Connect rewrites it.
+    func isCurrent(_ handler: JSONValue, event: String) -> Bool {
+        guard let pairs = desiredHandler(event)?.objectPairs else { return false }
+        return pairs.allSatisfy { handler[$0.key] == $0.value }
     }
 
     /// Parsed file, nil when it doesn't exist or is blank.
@@ -165,12 +179,12 @@ struct HookFile {
         return current
     }
 
-    /// Drops hook commands for which `keep` is false. A matcher group whose `hooks` list becomes empty, or a flat
-    /// entry whose command is dropped, disappears (nil).
-    private func strip(_ element: JSONValue, keep: (String) -> Bool) -> JSONValue? {
-        if let command = Self.command(of: element) { return keep(command) ? element : nil }
+    /// Drops hook handlers for which `keep` is false (handlers without a command are kept). A matcher group whose
+    /// `hooks` list becomes empty, or a flat entry that is dropped, disappears (nil).
+    private func strip(_ element: JSONValue, keep: (JSONValue) -> Bool) -> JSONValue? {
+        if Self.command(of: element) != nil { return keep(element) ? element : nil }
         guard let inner = element["hooks"]?.arrayValue else { return element }
-        let kept = inner.filter { handler in Self.command(of: handler).map(keep) ?? true }
+        let kept = inner.filter { handler in Self.command(of: handler) == nil || keep(handler) }
         if kept.count == inner.count { return element }
         if kept.isEmpty { return nil }
         var copy = element
@@ -184,8 +198,13 @@ struct HookFile {
     }
 
     static func commands(in element: JSONValue) -> [String] {
-        if let c = command(of: element) { return [c] }
-        return (element["hooks"]?.arrayValue ?? []).compactMap(command(of:))
+        handlers(in: element).compactMap(command(of:))
+    }
+
+    /// A flat entry is its own handler; a matcher group holds them in `hooks`.
+    static func handlers(in element: JSONValue) -> [JSONValue] {
+        if command(of: element) != nil { return [element] }
+        return element["hooks"]?.arrayValue ?? []
     }
 
     static func object(at path: [String], in doc: JSONValue) -> JSONValue? {

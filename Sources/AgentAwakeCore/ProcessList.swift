@@ -60,20 +60,57 @@ public enum ProcessList {
         kill(pid, 0) == 0 || errno == EPERM
     }
 
-    /// Direct children of `pid` started at or after `since` (Unix seconds).
-    public static func childrenStarted(of pid: pid_t, since: Double) -> [pid_t] {
+    /// Direct children of `pid`.
+    public static func children(of pid: pid_t) -> [pid_t] {
         let n = proc_listchildpids(pid, nil, 0)
         guard n > 0 else { return [] }
+        // Room for children forked between the count and the listing.
         var kids = [pid_t](repeating: 0, count: Int(n) + 16)
         let got = kids.withUnsafeMutableBufferPointer {
             proc_listchildpids(pid, $0.baseAddress, Int32($0.count * MemoryLayout<pid_t>.size))
         }
-        return kids.prefix(Int(max(0, got))).filter { kid in
-            var info = proc_bsdinfo()
-            let size = Int32(MemoryLayout<proc_bsdinfo>.size)
-            guard kid > 0, proc_pidinfo(kid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return false }
+        return kids.prefix(Int(max(0, got))).filter { $0 > 0 }
+    }
+
+    /// Direct children of `pid` started at or after `since` (Unix seconds).
+    public static func childrenStarted(of pid: pid_t, since: Double) -> [pid_t] {
+        children(of: pid).filter { kid in
+            guard let info = bsdInfo(kid) else { return false }
             return Double(info.pbi_start_tvsec) >= since
         }
+    }
+
+    /// Running entirely as the current user (real and effective uid): not root, not a setuid tool like sudo.
+    public static func isOwnedByUser(_ pid: pid_t) -> Bool {
+        guard let info = bsdInfo(pid) else { return false }
+        return info.pbi_uid == getuid() && info.pbi_ruid == getuid()
+    }
+
+    /// Physical footprint in bytes (Activity Monitor's Memory column). Readable only for the user's own processes.
+    public static func footprint(of pid: pid_t) -> UInt64? {
+        var usage = rusage_info_v4()
+        let ok = withUnsafeMutablePointer(to: &usage) {
+            $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+        }
+        return ok == 0 ? usage.ri_phys_footprint : nil
+    }
+
+    /// Stopped by SIGSTOP (or job control).
+    public static func isStopped(_ pid: pid_t) -> Bool { bsdInfo(pid)?.pbi_status == UInt32(SSTOP) }
+
+    /// Exited but not reaped yet: `kill(pid, 0)` still succeeds, but it's no longer running.
+    public static func isZombie(_ pid: pid_t) -> Bool { bsdInfo(pid)?.pbi_status == UInt32(SZOMB) }
+
+    /// Start time in microseconds: tells a process apart from a later one that reused its pid.
+    public static func startTime(of pid: pid_t) -> UInt64? {
+        bsdInfo(pid).map { $0.pbi_start_tvsec * 1_000_000 + $0.pbi_start_tvusec }
+    }
+
+    private static func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        guard pid > 0, proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+        return info
     }
 
     private static func allPIDs() -> [pid_t] {

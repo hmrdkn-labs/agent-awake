@@ -150,6 +150,10 @@ public enum Integrations {
         let cmd = { (event: String) in hookCommand(agent: spec.id, event: event, home: h) }
         let events = spec.events.map(\.event)
         let tools: Set<String> = ["PreToolUse", "PostToolUse", "BeforeTool", "AfterTool"]
+        /// Hook timeout in seconds: `short` for reporting events, long enough for the tool gate (`HookGate`) on the
+        /// gate event, which also must never be `async` (the agent has to wait for it).
+        func secs(_ e: String, _ short: Int) -> Int { e == spec.gate ? HookGate.timeout(for: spec) : short }
+        func async(_ e: String) -> Bool { e != spec.gate && tools.contains(e) }
 
         /// Claude-style matcher group: `{matcher?, hooks: [handler]}`.
         func group(_ matcher: String?, _ handler: [(String, JSONValue)]) -> JSONValue {
@@ -180,8 +184,8 @@ public enum Integrations {
             let file = shared(path) { e in
                 var handler: [(String, JSONValue)] = [("type", .string("command")), ("command", .string(cmd(e)))]
                 // SessionEnd hooks share a 1.5 s budget that a per-hook timeout would raise; leave it alone.
-                if e != "SessionEnd" { handler.append(("timeout", .int(5))) }
-                if tools.contains(e) { handler.append(("async", .bool(true))) }
+                if e != "SessionEnd" { handler.append(("timeout", .int(secs(e, 5)))) }
+                if async(e) { handler.append(("async", .bool(true))) }
                 return group(tools.contains(e) || e == "PermissionRequest" ? "*" : nil, handler)
             }
             return integration([path], note: nil,
@@ -191,7 +195,7 @@ public enum Integrations {
         case "codex":
             let path = h + "/.codex/hooks.json"
             let file = shared(path) { e in
-                group(nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(e == "SessionEnd" ? 2 : 5))])
+                group(nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, e == "SessionEnd" ? 2 : 5)))])
             }
             let appCLI = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex"
             let detect = Detection(binaries: ["codex"], apps: [("ChatGPT.app", "com.openai.codex"), ("Codex.app", nil)],
@@ -203,11 +207,11 @@ public enum Integrations {
                 }
                 let paths = Set([path, FileOps.canonical(path)])   // Codex keys trust by the realpath
                 let keySets = try paths.map { try CodexTrust.keys(for: file, hooksPath: $0) }
-                if keySets.contains(where: { keys in !keys.isEmpty && keys.allSatisfy { state.trusted.contains($0) && !state.disabled.contains($0) } }) {
+                if keySets.contains(where: { keys in !keys.isEmpty && keys.allSatisfy { state.trusted[$0.key] == $0.hash && !state.disabled.contains($0.key) } }) {
                     return .connected
                 }
                 let cli = Detection(binaries: ["codex"]).isInstalled(home: h) ? "codex" : "“\(appCLI)”"
-                return .needsAction("Codex runs new hooks only after you trust them. Run \(cli) in Terminal and choose “Trust all and continue” (or type /hooks and trust Agent Awake's hooks). The ChatGPT app can't approve hooks itself, so this one-time step happens in the Codex CLI.")
+                return .needsAction("Codex runs new or changed hooks only after you trust them. Run \(cli) in Terminal and choose “Trust all and continue” (or type /hooks and trust Agent Awake's hooks). The ChatGPT app can't approve hooks itself, so this step happens in the Codex CLI.")
             }
             return integration([path], note: "Codex asks you to trust new hooks once: run codex in Terminal and choose “Trust all and continue”. The ChatGPT app has no trust prompt, so use the CLI (it ships inside the app).",
                                detect: detect, .shared(file, cleanup: [], trust: trust))
@@ -217,7 +221,7 @@ public enum Integrations {
             var hooks = JSONValue.object([])
             for e in events {
                 hooks.set(e, .array([group(tools.contains(e) ? "*" : nil, [
-                    ("name", .string("agentawake-\(e)")), ("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5000)),
+                    ("name", .string("agentawake-\(e)")), ("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5) * 1000)),
                 ])]))
             }
             let manifest = JSONValue.obj([("name", .string("agentawake")), ("version", .string("1.0.0")),
@@ -245,8 +249,8 @@ public enum Integrations {
             let path = h + "/.qwen/settings.json"
             let file = shared(path, comments: true) { e in
                 var handler: [(String, JSONValue)] = [("type", .string("command")), ("name", .string("agentawake-\(e)")),
-                                                     ("command", .string(cmd(e))), ("timeout", .int(5))]
-                if tools.contains(e) { handler.append(("async", .bool(true))) }
+                                                     ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5)))]
+                if async(e) { handler.append(("async", .bool(true))) }
                 return group(tools.contains(e) ? "*" : nil, handler)
             }
             return integration([path], note: "Restart Qwen Code (or open /hooks) to load the hooks.",
@@ -255,7 +259,7 @@ public enum Integrations {
 
         case "droid":
             let entry = { (e: String) -> JSONValue in
-                group(tools.contains(e) ? "*" : nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5))])
+                group(tools.contains(e) ? "*" : nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5)))])
             }
             let standalone = h + "/.factory/hooks.json", legacy = h + "/.factory/hooks/hooks.json", settings = h + "/.factory/settings.json"
             let candidates = [
@@ -277,7 +281,7 @@ public enum Integrations {
         case "auggie":
             let path = h + "/.augment/settings.json"
             let file = shared(path, comments: true) { e in
-                group(tools.contains(e) ? ".*" : nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5000))])
+                group(tools.contains(e) ? ".*" : nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5) * 1000))])
             }
             return integration([path], note: "Needs Auggie 0.27 or later. Takes effect the next time auggie starts.",
                                detect: Detection(binaries: ["auggie"], paths: [".augment/settings.json"]),
@@ -289,7 +293,7 @@ public enum Integrations {
             for e in events {
                 var entry: [(String, JSONValue)] = [("type", .string("command"))]
                 if e == "notification" { entry.append(("matcher", .string("permission_prompt|elicitation_dialog"))) }
-                entry += [("bash", .string(cmd(e))), ("timeoutSec", .int(5))]
+                entry += [("bash", .string(cmd(e))), ("timeoutSec", .int(secs(e, 5)))]
                 hooks.set(e, .array([.obj(entry)]))
             }
             let content = JSONValue.obj([("version", .int(1)), ("hooks", hooks)]).serialized() + "\n"
@@ -316,7 +320,7 @@ public enum Integrations {
         case "devin":
             let path = h + "/.config/devin/config.json"
             let file = shared(path) { e in
-                group("", [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5))])
+                group("", [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5)))])
             }
             return integration([path], note: nil,
                                detect: Detection(binaries: ["devin"], apps: [("Devin.app", nil)], paths: [".config/devin"]),
@@ -325,7 +329,7 @@ public enum Integrations {
         case "kiro":
             let path = h + "/.kiro/hooks/agentawake.json"
             let hooks: [JSONValue] = events.map { e in
-                .obj([("name", .string("agentawake-\(e)")), ("trigger", .string(e)), ("timeout", .int(5)),
+                .obj([("name", .string("agentawake-\(e)")), ("trigger", .string(e)), ("timeout", .int(secs(e, 5))),
                       ("action", .obj([("type", .string("command")), ("command", .string(cmd(e)))]))])
             }
             let content = JSONValue.obj([("version", .string("v1")), ("hooks", .array(hooks))]).serialized() + "\n"
@@ -337,7 +341,7 @@ public enum Integrations {
             let dir = h + "/.agents/plugins/agentawake"
             var hooks = JSONValue.object([])
             for e in events {
-                hooks.set(e, .array([group(nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(5))])]))
+                hooks.set(e, .array([group(nil, [("type", .string("command")), ("command", .string(cmd(e))), ("timeout", .int(secs(e, 5)))])]))
             }
             let manifest = JSONValue.obj([("name", .string("agentawake")), ("version", .string("1.0.0")),
                                           ("description", .string("Agent Awake: keeps the Mac awake while Goose works and pings you when it's done."))])
@@ -351,7 +355,7 @@ public enum Integrations {
             let path = h + "/.junie/config.json"
             let file = shared(path) { e in
                 var handler: [(String, JSONValue)] = [("type", .string("command")), ("command", .string(cmd(e))),
-                                                     ("timeout", .int(e == "SessionEnd" ? 2 : 5))]
+                                                     ("timeout", .int(secs(e, e == "SessionEnd" ? 2 : 5)))]
                 if e == "UserPromptSubmit" || e == "Stop" { handler.append(("async", .bool(true))) }
                 return group(nil, handler)
             }
