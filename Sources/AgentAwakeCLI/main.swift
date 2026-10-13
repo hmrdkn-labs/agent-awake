@@ -152,7 +152,8 @@ case "strain":
     }
     guard let s = r.strain else { print("unknown (Agent Awake isn't running)"); exit(0) }
     let swap = s.swapUsed.map { " swap=" + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .memory) } ?? ""
-    print("\(s.reason ?? "normal")\tthermal=\(s.thermal)\tmemory=\(s.memory)\(swap)\tholding=\(r.holding == true)")
+    let temps = [("battery", s.batteryTemp), ("chip", s.chipTemp)].compactMap { k, v in v.map { "\t\(k)=\(Int($0.rounded()))°C" } }.joined()
+    print("\(s.reason ?? "normal")\tthermal=\(s.thermal)\(temps)\tmemory=\(s.memory)\(swap)\tholding=\(r.holding == true)")
     exit(r.holding == true && wait ? 75 : 0)
 case "agents":
     for i in Integrations.all() {

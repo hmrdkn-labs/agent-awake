@@ -234,10 +234,10 @@ struct GeneralTab: View {
                         if model.helper == .needsApproval { Button("Approve in System Settings…") { HelperInstaller.openSettings() } }
                     }
                 }
-                Text("Turns itself off when work ends, at 10% battery, or when the Mac gets hot.")
+                Text("Turns itself off when work ends, at 10% battery, when the battery passes 45 °C, or when it drains faster than 20% an hour, so a Mac in a bag goes to sleep.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("When the Mac is hot or low on memory") {
+            Section("When the Mac is hot or memory is almost full") {
                 Toggle("Agents wait before their next step until it recovers", isOn: Binding(
                     get: { model.config.effectiveHoldWhenStrained },
                     set: { var c = model.config; c.holdWhenStrained = $0; model.saveConfig(c) }))
@@ -249,7 +249,8 @@ struct GeneralTab: View {
                     Text("Only notify me").tag(Config.MemoryRelief.none)
                 }
                 Text("Only builds, tests and other processes your agents started are touched, never the agents or your apps. "
-                     + "While it's hot they run at low priority. Paused processes continue when memory recovers.")
+                     + "Hot means a battery over 45 °C or macOS slowing the chip: their work runs at low priority, and over 50 °C it's paused "
+                     + "until the Mac cools. Paused processes continue when memory recovers. History: ~/.agent-awake/strain.log")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if model.herdrPath != nil {

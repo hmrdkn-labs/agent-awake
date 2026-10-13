@@ -15,21 +15,31 @@ public struct Strain: Codable, Equatable {
     public var memory: StrainLevel
     /// Bytes of swap in use, when known (shown to the user, not used for the level).
     public var swapUsed: UInt64?
+    /// Hottest battery and chip sensors, °C, when readable. The battery one feeds `thermal`.
+    public var batteryTemp: Double?
+    public var chipTemp: Double?
 
-    public init(thermal: StrainLevel = .normal, memory: StrainLevel = .normal, swapUsed: UInt64? = nil) {
+    public init(thermal: StrainLevel = .normal, memory: StrainLevel = .normal, swapUsed: UInt64? = nil,
+                batteryTemp: Double? = nil, chipTemp: Double? = nil) {
         self.thermal = thermal; self.memory = memory; self.swapUsed = swapUsed
+        self.batteryTemp = batteryTemp; self.chipTemp = chipTemp
     }
 
     public static let normal = Strain()
     public var level: StrainLevel { max(thermal, memory) }
 
-    /// Short human reason, nil when normal. Memory first: it's the one that ends in killed apps.
+    /// Agents hold when it's hot, or when memory is critical. Memory "warn" is routine on a busy Mac (it can
+    /// last for hours with a dozen agents open), so it's shown but doesn't stop anyone.
+    public var holdsAgents: Bool { thermal >= .elevated || memory == .critical }
+
+    /// Short human reason, nil when normal. Most urgent first.
     public var reason: String? {
+        let temp = batteryTemp.map { " (battery \(Int($0.rounded())) °C)" } ?? ""
         switch (memory, thermal) {
         case (.critical, _): return "Memory is almost full"
-        case (_, .critical): return "Mac is overheating"
+        case (_, .critical): return "Mac is overheating" + temp
+        case (_, .elevated): return "Mac is running hot" + temp
         case (.elevated, _): return "Memory is running low"
-        case (_, .elevated): return "Mac is running hot"
         default: return nil
         }
     }

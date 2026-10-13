@@ -63,6 +63,7 @@ final class Model: ObservableObject {
     let strainGuard: StrainGuard
     private var herdr: HerdrWatcher?
     private var poll: Timer?
+    private var history: Timer?
 
     var agents: [SessionInfo] { sessions.filter { $0.name != Engine.manualName } }
     var manual: SessionInfo? { sessions.first { $0.name == Engine.manualName } }
@@ -79,7 +80,12 @@ final class Model: ObservableObject {
         self.router = router
         let e = Engine(notifier: router)
         engine = e
-        lid = LidGuard(controller: XPCSleepController(), notifier: router)
+        let g = StrainGuard(engine: e, sensor: LiveStrainSensor(), relief: LiveRelief(), notifier: router)
+        strainGuard = g
+        let lidSafety = LidSafety(), power = SystemPowerState()
+        lid = LidGuard(controller: XPCSleepController(), notifier: router) { [g] in
+            lidSafety.check(strain: g.report().0, power: power.read(), now: Date().timeIntervalSince1970)
+        }
         assertions = AssertionWatcher(engine: e)
         // "show" comes from a second launch of the app, "settings" from `agentawake settings`;
         // everything else is session traffic.
@@ -97,8 +103,6 @@ final class Model: ObservableObject {
             }
             return e.handle(req)
         }
-        let g = StrainGuard(engine: e, sensor: LiveStrainSensor(), relief: LiveRelief(), notifier: router)
-        strainGuard = g
         e.strainReport = { [g] in g.report() }
         e.onChange = { [weak self] list in
             DispatchQueue.main.async { self?.apply(list) }
@@ -107,6 +111,14 @@ final class Model: ObservableObject {
             DispatchQueue.main.async { self?.strain = s; self?.holding = holding }
         }
         g.start()
+        let log = StrainLog()
+        history = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [g, power] _ in
+            let (s, holding) = g.report()
+            let agents = e.store.list().filter { $0.name != Engine.manualName }.count
+            DispatchQueue.global(qos: .utility).async {
+                log.append(strain: s, holding: holding, agents: agents, power: power.read(), lidClosed: StrainLog.lidClosed())
+            }
+        }
         do { try server.start(); e.start() } catch SocketError.alreadyRunning {
             // Another copy is running: bring up its window instead of starting a second daemon.
             _ = try? Client.send(Request(cmd: "show"))

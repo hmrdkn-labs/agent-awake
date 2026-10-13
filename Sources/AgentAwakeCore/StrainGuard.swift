@@ -11,6 +11,8 @@ public final class StrainGuard {
     public static let minRelief: UInt64 = 256 << 20
     /// Wait this long after acting before acting again, so memory has time to recover.
     public static let reliefCooldown: Double = 30
+    /// Memory must stay below critical this long before paused work continues.
+    public static let memoryCalm: Double = 60
 
     private let engine: Engine
     private let sensor: StrainSensing
@@ -21,8 +23,10 @@ public final class StrainGuard {
     private let lock = NSLock()
     private var strain = Strain.normal
     private var throttled: Set<Int32> = []
-    private var paused: [Int32: String] = [:]          // pid -> name, for the resume ping
+    private var paused: [Int32: String] = [:]          // memory relief: pid -> name, for the resume ping
+    private var heatPaused: [Int32: String] = [:]      // overheating: everything agents started
     private var lastRelief: Double = -.infinity
+    private var memoryCalmSince: Double?
     private var timer: DispatchSourceTimer?
     /// Called (on an arbitrary thread) when the strain or holding state changes.
     public var onChange: ((Strain, Bool) -> Void)?
@@ -49,7 +53,7 @@ public final class StrainGuard {
     }
 
     private func holds(_ s: Strain) -> Bool {
-        s.level >= .elevated && config().effectiveHoldWhenStrained
+        s.holdsAgents && config().effectiveHoldWhenStrained
     }
 
     public func tick() {
@@ -63,7 +67,8 @@ public final class StrainGuard {
         lock.lock()
         let before = strain
         strain = s
-        let children = (s.level > .normal || !throttled.isEmpty) && !agents.isEmpty ? relief.agentChildren(of: agents) : []
+        let acts = s.thermal > .normal || s.memory == .critical || !throttled.isEmpty
+        let children = acts && !agents.isEmpty ? relief.agentChildren(of: agents) : []
 
         // Heat: agent-started work runs on efficiency cores until it cools down.
         if s.thermal >= .elevated {
@@ -74,9 +79,26 @@ public final class StrainGuard {
         }
         throttled = throttled.filter { ProcessList.isAlive($0) }
 
+        // Overheating (e.g. working in a bag): stop everything agents started until it's back to normal.
+        if s.thermal == .critical {
+            let fresh = children.filter { heatPaused[$0.pid] == nil && paused[$0.pid] == nil && relief.pause($0.pid) }
+            for c in fresh { heatPaused[c.pid] = c.name }
+            if !fresh.isEmpty && before.thermal != .critical {
+                alerts.append(Alert(title: "\(s.reason ?? "Mac is overheating"): paused agent work",
+                                    body: "Paused \(fresh.count) process\(fresh.count == 1 ? "" : "es") your agents started. They continue once it cools down.",
+                                    level: .urgent))
+            }
+        }
+        var resumed: [String] = []
+        if s.thermal == .normal, !heatPaused.isEmpty {
+            resumed += heatPaused.values
+            for pid in heatPaused.keys { relief.resume(pid) }
+            heatPaused = [:]
+        }
+
         // Memory almost full: one process at a time, largest first.
         if s.memory == .critical, cfg.effectiveMemoryRelief != .none, now() - lastRelief >= Self.reliefCooldown,
-           let c = children.first(where: { paused[$0.pid] == nil && $0.footprint >= Self.minRelief }) {
+           let c = children.first(where: { paused[$0.pid] == nil && heatPaused[$0.pid] == nil && $0.footprint >= Self.minRelief }) {
             let size = ByteCountFormatter.string(fromByteCount: Int64(c.footprint), countStyle: .memory)
             let who = titles[c.session] ?? c.session
             if cfg.effectiveMemoryRelief == .kill {
@@ -94,14 +116,17 @@ public final class StrainGuard {
                                     level: .urgent, session: c.session))
             }
         }
-        // Continue paused work once memory is back to normal (not merely below critical, so it doesn't flap).
-        var resumed: [String] = []
-        if s.memory == .normal, !paused.isEmpty {
-            resumed = paused.values.sorted()
+        // Continue memory-paused work once memory has stayed below critical for a minute (so it doesn't flap).
+        // Not "back to normal": on a busy Mac the warning level can last for hours.
+        memoryCalmSince = s.memory == .critical ? nil : (memoryCalmSince ?? now())
+        if let calm = memoryCalmSince, now() - calm >= Self.memoryCalm, !paused.isEmpty {
+            resumed += paused.values
             for pid in paused.keys { relief.resume(pid) }
             paused = [:]
         }
+        resumed.sort()
         paused = paused.filter { ProcessList.isAlive($0.key) }
+        heatPaused = heatPaused.filter { ProcessList.isAlive($0.key) }
         let holding = holds(s), wasHolding = holds(before)
         lock.unlock()
 
@@ -122,8 +147,8 @@ public final class StrainGuard {
     /// On quit: nothing stays paused or throttled behind the user's back.
     public func releaseAll() {
         lock.lock(); defer { lock.unlock() }
-        for pid in paused.keys { relief.resume(pid) }
+        for pid in Array(paused.keys) + Array(heatPaused.keys) { relief.resume(pid) }
         for pid in throttled { relief.throttle(pid, false) }
-        paused = [:]; throttled = []
+        paused = [:]; heatPaused = [:]; throttled = []
     }
 }

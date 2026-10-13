@@ -67,7 +67,7 @@ final class StrainGuardTests: XCTestCase {
         XCTAssertTrue(r.throttled.isEmpty)
     }
 
-    func testCriticalMemoryPausesLargestThenResumesWhenNormal() {
+    func testCriticalMemoryPausesLargestThenResumesAfterACalmMinute() {
         let (g, _, s, r, n) = make()
         r.children = [AgentChild(pid: 9999, name: "small", footprint: 10 << 20, session: "claude:1"),
                       AgentChild(pid: me, name: "node", footprint: 3 << 30, session: "claude:1")]
@@ -79,11 +79,39 @@ final class StrainGuardTests: XCTestCase {
         XCTAssertEqual(r.paused, [me], "cooldown, and the small one isn't worth pausing")
         s.value = Strain(memory: .elevated)
         g.tick()
-        XCTAssertEqual(r.paused, [me], "stays paused until memory is back to normal")
+        t += StrainGuard.memoryCalm - 1; g.tick()
+        XCTAssertEqual(r.paused, [me], "not before memory stayed below critical for a minute")
+        t += 1; g.tick()
+        XCTAssertTrue(r.paused.isEmpty, "memory warn can last for hours: don't wait for normal")
+        XCTAssertEqual(n.alerts.last?.title, "Memory recovered"); XCTAssertEqual(n.alerts.last?.body, "Continued node.")
+    }
+
+    func testMemoryWarningAloneNeverHolds() {
+        let (g, e, s, r, _) = make()
+        r.children = [AgentChild(pid: me, name: "node", footprint: 3 << 30, session: "claude:1")]
+        s.value = Strain(memory: .elevated)
+        g.tick()
+        XCTAssertEqual(holding(e), false)
+        XCTAssertTrue(r.paused.isEmpty && r.throttled.isEmpty)
+        XCTAssertEqual(e.handle(Request(cmd: "strain")).strain?.reason, "Memory is running low")
+    }
+
+    func testOverheatingPausesAllAgentWorkUntilItCools() {
+        let (g, e, s, r, n) = make()
+        r.children = [AgentChild(pid: me, name: "cargo", footprint: 2 << 30, session: "claude:1"),
+                      AgentChild(pid: getppid(), name: "sh", footprint: 1 << 20, session: "claude:1")]
+        s.value = Strain(thermal: .critical, batteryTemp: 51)
+        g.tick()
+        XCTAssertEqual(r.paused, [me, getppid()], "everything agents started, however small")
+        XCTAssertEqual(holding(e), true)
+        XCTAssertTrue(n.alerts.contains { $0.title == "Mac is overheating (battery 51 °C): paused agent work" })
+        s.value = Strain(thermal: .elevated, batteryTemp: 47)
+        g.tick()
+        XCTAssertEqual(r.paused.count, 2, "still warm: stays paused")
         s.value = .normal
         g.tick()
         XCTAssertTrue(r.paused.isEmpty)
-        XCTAssertEqual(n.alerts.last?.title, "Back to normal"); XCTAssertTrue(n.alerts.last!.body.contains("Continued node"))
+        XCTAssertTrue(n.alerts.last!.body.contains("Continued cargo, sh"))
     }
 
     func testKillModeEndsLargestOnlyAfterCooldown() {

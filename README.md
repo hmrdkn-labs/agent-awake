@@ -34,11 +34,13 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
   reply remotely, then sleeps.
 - **Not fooled by long builds.** A quiet agent that is still running a build or tests keeps the Mac
   awake. One whose process exited is let go at once, and one that is truly stuck gets you a ping.
-- **Backs off when the Mac struggles.** When it runs hot or low on memory, agents wait before their next
-  step until it recovers, and the builds they started drop to low priority. When memory is almost full, the
-  largest process an agent started is paused (or stopped, if you choose) before macOS starts killing apps.
+- **Backs off when the Mac struggles.** When it runs hot, agents wait before their next step until it
+  cools, and the builds they started drop to low priority (or pause, when it overheats). When memory is
+  almost full, the largest process an agent started is paused (or stopped, if you choose) before macOS
+  starts killing apps.
 - **Lid closed (optional).** Keep agents running in your bag. A small privileged helper turns this on only
-  while work runs, and turns it off if the battery reaches 10%, the Mac gets hot, or the app quits.
+  while work runs, and turns it off if the battery reaches 10%, gets hot, drains fast (a Mac in a bag), or
+  the app quits.
 - **Keep awake presets.** 1h, 2h, 4h, or until you turn it off. These also keep the screen on and unlocked,
   like `caffeinate -d`, for when you're watching or presenting.
 
@@ -114,12 +116,19 @@ Settings live in `~/.agent-awake/config.json` (mode 0600); `AGENT_AWAKE_NTFY_TOP
 
 ## Heat and memory
 
-Agent Awake reads macOS's thermal pressure level and memory pressure level (no root, no permissions).
+Agent Awake reads the battery and chip temperatures, macOS's thermal pressure level and its memory
+pressure level (no root, no permissions). macOS only raises its thermal level once it starts slowing the
+chip, which can be long after the case is too hot to hold, so the battery sensor decides first.
 
 | Mac | What happens |
 |---|---|
-| Running hot, or memory low | Agents wait before their next tool call until it recovers (up to 10 min per call, then they go on). Processes agents started run at background priority while it's hot. You get one ping when holding starts and one when it ends. |
-| Memory almost full | The largest process an agent started (a build, tests, a dev server over 256 MB) is paused, one every 30 s, and continued once memory is back to normal. Settings → General can stop it instead, or only notify. |
+| Hot: battery 45 °C, or macOS slowing the chip | Agents wait before their next tool call until it cools (up to 10 min per call, then they go on). Processes agents started run at background priority. You get one ping when holding starts and one when it ends. |
+| Overheating: battery 50 °C | Also pauses every process agents started, until it's back to normal. |
+| Memory almost full | Agents wait, and the largest process an agent started (a build, tests, a dev server over 256 MB) is paused, one every 30 s. It continues once memory has stayed below "almost full" for a minute. Settings → General can stop it instead, or only notify. |
+| Memory low | Shown in the menu bar only. On a busy Mac macOS can sit at this level for hours, so nobody waits. |
+
+Every minute a line goes to `~/.agent-awake/strain.log` (temperatures, pressure levels, battery, lid), so the
+limits can be checked against real days. It stays on your Mac. The 45/50 °C limits are starting values.
 
 Only processes your agents started are touched: never the agents themselves, your apps, or other users'
 processes. Nothing stays paused or slowed after Agent Awake quits.

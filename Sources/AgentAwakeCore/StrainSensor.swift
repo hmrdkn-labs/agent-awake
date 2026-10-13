@@ -15,11 +15,14 @@ public final class LiveStrainSensor: StrainSensing {
         public var memoryPressure: () -> Int32?
         /// `vm.swapusage` bytes used.
         public var swapUsed: () -> UInt64?
+        /// Battery and chip sensor temperatures.
+        public var temperatures: () -> TemperatureReader.Reading
 
         public init(thermalPressure: @escaping () -> UInt64?, thermalState: @escaping () -> ProcessInfo.ThermalState,
-                    memoryPressure: @escaping () -> Int32?, swapUsed: @escaping () -> UInt64?) {
+                    memoryPressure: @escaping () -> Int32?, swapUsed: @escaping () -> UInt64?,
+                    temperatures: @escaping () -> TemperatureReader.Reading = { .init() }) {
             self.thermalPressure = thermalPressure; self.thermalState = thermalState
-            self.memoryPressure = memoryPressure; self.swapUsed = swapUsed
+            self.memoryPressure = memoryPressure; self.swapUsed = swapUsed; self.temperatures = temperatures
         }
     }
 
@@ -45,17 +48,30 @@ public final class LiveStrainSensor: StrainSensing {
                 var usage = xsw_usage()
                 var size = MemoryLayout<xsw_usage>.size
                 return sysctlbyname("vm.swapusage", &usage, &size, nil, 0) == 0 ? usage.xsu_used : nil
-            })
+            },
+            temperatures: { [temps = TemperatureReader()] in temps.read() })
     }
 
     deinit { if token != NOTIFY_TOKEN_INVALID { notify_cancel(token) } }
 
+    /// Battery temperature (°C) at which the Mac counts as hot / overheating. macOS's own pressure level stays
+    /// nominal well past the point where the case is too hot to touch, so the battery sensor decides earlier.
+    /// Starting values: a battery on a desk under load runs about 35-42 °C; tune from ~/.agent-awake/strain.log.
+    public static let batteryHot: Double = 45
+    public static let batteryOverheating: Double = 50
+
     public func read() -> Strain {
-        let thermal = readers.thermalPressure().map(Self.thermalLevel(pressure:))
+        let pressure = readers.thermalPressure().map(Self.thermalLevel(pressure:))
             ?? Self.thermalLevel(state: readers.thermalState())
-        return Strain(thermal: thermal,
+        let t = readers.temperatures()
+        return Strain(thermal: max(pressure, Self.thermalLevel(battery: t.battery)),
                       memory: readers.memoryPressure().map(Self.memoryLevel(pressure:)) ?? .normal,
-                      swapUsed: readers.swapUsed())
+                      swapUsed: readers.swapUsed(), batteryTemp: t.battery, chipTemp: t.chip)
+    }
+
+    public static func thermalLevel(battery: Double?) -> StrainLevel {
+        guard let b = battery else { return .normal }
+        return b >= batteryOverheating ? .critical : b >= batteryHot ? .elevated : .normal
     }
 
     /// Moderate is routine under a long build; heavy is where macOS starts capping CPU speed, trapping is near

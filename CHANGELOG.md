@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.2 (2026-10-13)
+
+- Heat now uses the battery and chip temperatures, not only macOS's thermal level, which stayed "nominal"
+  through a 75-minute trip in a bag while the battery fell from 100% to 59%. Battery 45 °C holds agents and
+  slows their work; 50 °C also pauses everything agents started until it cools.
+- Lid-closed mode turns itself off when the battery passes 45 °C or drains faster than 20% an hour, so a Mac in
+  a bag goes to sleep.
+- Memory "low" no longer holds agents: on a busy Mac it can last for hours. Only "almost full" does, and paused
+  processes continue once memory has stayed below that for a minute.
+- `~/.agent-awake/strain.log`: one line a minute of temperatures, pressure, battery and lid state.
+- `agentawake strain` shows battery and chip temperatures.
+
 ## 0.1.1 (2026-10-12)
 
 - Heat and memory awareness. When the Mac runs hot or low on memory, agents wait before their next tool call

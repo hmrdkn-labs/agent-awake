@@ -248,7 +248,7 @@ private struct FinishPage: View {
                 Section {
                     Toggle(isOn: $model.lidMode) {
                         Text("Keep working with the lid closed")
-                        Text("While agents work. Needs a one-time approval in System Settings. Turns itself off when work ends, at 10% battery, or when the Mac gets hot.")
+                        Text("While agents work. Needs a one-time approval in System Settings. Turns itself off when work ends, at 10% battery, or when the Mac gets hot or drains fast in a bag.")
                     }
                     if model.lidMode {
                         LabeledContent("Helper") {
