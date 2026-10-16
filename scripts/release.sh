@@ -108,17 +108,27 @@ xcrun stapler validate "$DMG" >/dev/null 2>&1 || xcrun stapler staple "$DMG"
 spctl --assess --type execute "$APP"
 spctl --assess --type open --context context:primary-signature "$DMG"
 
+# Sparkle feed: the previous release's appcast plus this version, attached to this release. The app reads
+# releases/latest/download/appcast.xml, so publishing the release is what offers the update.
+FEED="$STATE/appcast.xml"
+if [ ! -s "$FEED" ]; then
+  gh release download --repo "$REPO" --pattern appcast.xml --output "$FEED" 2>/dev/null || rm -f "$FEED"
+fi
+scripts/appcast.sh "$VERSION" "$DMG" "$FEED"
+
 if ! gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
   # Notes: this version's CHANGELOG section, then how to install.
   changes=$(awk -v v="## $VERSION " 'index($0, v) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md)
   [ -n "$changes" ] || { log "no CHANGELOG.md section for $VERSION"; exit 1; }
-  gh release create "v$VERSION" "$DMG" --repo "$REPO" --title "Agent Awake $VERSION" --notes-file - <<EOF
+  gh release create "v$VERSION" "$DMG" "$FEED" --repo "$REPO" --title "Agent Awake $VERSION" --notes-file - <<EOF
 Keeps your Mac awake while AI coding agents work, lets it sleep when they finish, and pings your phone.
 $changes
 
 Open the DMG, drag Agent Awake to Applications, and open it, or \`brew install --cask hmrdkn-labs/tap/agent-awake\`.
-Signed with Developer ID and notarized by Apple. Requires macOS 13 or later.
+Signed with Developer ID and notarized by Apple. Requires macOS 13 or later. Updates install themselves.
 EOF
+else
+  gh release upload "v$VERSION" "$FEED" --repo "$REPO" --clobber
 fi
 scripts/update-cask.sh "$VERSION" "$DMG"
 notify "Released v$VERSION: https://github.com/$REPO/releases/tag/v$VERSION"

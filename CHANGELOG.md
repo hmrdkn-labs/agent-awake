@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 (2026-10-16)
 
 - The app updates itself: it checks GitHub for new versions in the background and installs them in place
   (Sparkle 2, EdDSA-signed). Turn it off in Settings → General, or check now with "Check for Updates…".
+  Versions before 0.1.4 can't update themselves: download this one once.
+- Homebrew: `brew install --cask hmrdkn-labs/tap/agent-awake`.
 
 ## 0.1.3 (2026-10-16)
 
