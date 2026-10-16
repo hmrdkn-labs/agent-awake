@@ -32,7 +32,6 @@ public final class AssertionWatcher {
     private let interval: Double
     private let quietPolls: Int
     private var tracked: [String: Int] = [:]   // session name -> polls without its assertion
-    private var skip: Set<String> = []
     private var timer: DispatchSourceTimer?
     private let lock = NSLock()
 
@@ -42,12 +41,6 @@ public final class AssertionWatcher {
                 env: @escaping (Int32) -> [String: String] = ProcessList.environment) {
         self.engine = engine; self.fetch = fetch; self.cwd = cwd; self.env = env
         self.interval = interval; self.quietPolls = quietPolls
-    }
-
-    /// Agents connected through their own hooks; their assertions would only double-count.
-    public var skipAgents: Set<String> {
-        get { lock.lock(); defer { lock.unlock() }; return skip }
-        set { lock.lock(); skip = newValue; lock.unlock() }
     }
 
     /// While the herdr watcher runs, agents inside herdr panes are its to report (it knows their task and
@@ -75,14 +68,21 @@ public final class AssertionWatcher {
     public func poll() {
         let me = ProcessInfo.processInfo.processIdentifier
         var seen: [String: (Rule, Int32)] = [:]
-        lock.lock(); let skipping = skip, inHerdr = herdr; lock.unlock()
-        for h in fetch() where h.pid != me {
-            guard let r = Self.rules.first(where: { $0.matches(h) }), !skipping.contains(r.agent) else { continue }
+        lock.lock(); let inHerdr = herdr, own = Set(tracked.keys); lock.unlock()
+        // Processes that report through their own hooks: their assertions would only double-count them.
+        // Decided per process, so agents started before Connect stay followed.
+        let hooked = Set(engine.store.list().filter { !own.contains($0.name) }.compactMap(\.pid))
+        for h in fetch() where h.pid != me && !hooked.contains(h.pid) {
+            guard let r = Self.rules.first(where: { $0.matches(h) }) else { continue }
             let name = "\(r.agent):pid\(h.pid)"
             if inHerdr, seen[name] == nil, env(h.pid)["HERDR_PANE_ID"] != nil { continue }
             seen[name] = (r, h.pid)
         }
         lock.lock(); defer { lock.unlock() }
+        for name in tracked.keys where engine.store.get(name)?.pid.map(hooked.contains) == true {
+            tracked[name] = nil
+            _ = engine.handle(Request(cmd: "done", name: name, kind: .ended))   // its hooks took over
+        }
         for (name, (rule, pid)) in seen {
             if tracked[name] == nil {
                 let folder = cwd(pid).map { ($0 as NSString).lastPathComponent }

@@ -31,12 +31,25 @@ final class AssertionWatcherTests: XCTestCase {
         XCTAssertFalse(p.held)
     }
 
-    func testConnectedAgentsAreLeftToTheirHooks() {
-        let (w, _, p, _) = make()
-        w.skipAgents = ["omp"]
+    func testProcessesReportingThroughHooksAreLeftToThemSilently() {
+        let (w, e, _, n) = make()
         holders = [omp]
         w.poll()
-        XCTAssertFalse(p.held)
+        XCTAssertEqual(e.store.list().map(\.name), ["omp:pid501"])
+        // The same omp process starts reporting through its hooks: our copy ends without a "done" ping.
+        XCTAssertTrue(e.handle(Request(cmd: "begin", name: "omp:ses_1", agent: "omp", pid: 501)).ok)
+        w.poll()
+        XCTAssertEqual(e.store.list().map(\.name), ["omp:ses_1"])
+        XCTAssertTrue(n.sent.isEmpty)
+    }
+
+    func testOlderProcessesOfAConnectedAgentAreStillFollowed() {
+        let (w, e, p, _) = make()
+        XCTAssertTrue(e.handle(Request(cmd: "begin", name: "omp:ses_new", agent: "omp", pid: 777)).ok)
+        holders = [omp]   // pid 501 started before Connect: it has no hooks loaded
+        w.poll()
+        XCTAssertEqual(Set(e.store.list().map(\.name)), ["omp:ses_new", "omp:pid501"])
+        XCTAssertTrue(p.held)
     }
 }
 

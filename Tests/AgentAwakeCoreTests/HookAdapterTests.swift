@@ -431,3 +431,16 @@ final class AntigravityHookTests: XCTestCase {
         XCTAssertEqual(HookAdapter.stdout(agent: "antigravity", event: "PostToolUse"), "{}")
     }
 }
+
+extension HookAdapterTests {
+    func testHooksInsideAHerdrPaneCarryThePane() {
+        let got = HookAdapter.requests(agent: "claude", event: "UserPromptSubmit",
+                                       payload: Data(#"{"session_id":"s1","prompt":"x","cwd":"/src/shop"}"#.utf8),
+                                       env: ["HERDR_PANE_ID": "wM:p5"], agentPID: 7, config: Config())
+        XCTAssertEqual(got.map(\.pane), ["wM:p5"])
+        let outside = HookAdapter.requests(agent: "claude", event: "UserPromptSubmit",
+                                           payload: Data(#"{"session_id":"s1","prompt":"x"}"#.utf8),
+                                           env: [:], agentPID: 7, config: Config())
+        XCTAssertEqual(outside.map(\.pane), [nil])
+    }
+}

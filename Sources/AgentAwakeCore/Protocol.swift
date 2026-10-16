@@ -18,6 +18,7 @@ public struct Request: Codable {
     public var fallbackLabel: String? // title to use only if the session has none yet (created mid-stream)
     public var agent: String?         // integration id ("claude", "codex", …) for display and dedupe
     public var pid: Int32?            // the agent's process; lets the app tell "busy in a long tool" from "gone"
+    public var pane: String?          // herdr pane the agent runs in, if any (the herdr watcher skips it)
     public var timeout: Double?       // seconds of allowed silence; nil/0 = never expires
     public var kind: DoneKind?        // for `done`
     public var message: String?       // detail for the ping
@@ -45,6 +46,7 @@ public struct SessionInfo: Codable, Equatable {
     public var label: String?
     public var agent: String?
     public var pid: Int32?
+    public var pane: String?
     public var state: SessionState
     public var startedAt: Double
     public var lastBeat: Double

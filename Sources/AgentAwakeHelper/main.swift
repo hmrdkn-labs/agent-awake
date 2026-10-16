@@ -7,6 +7,10 @@ import AgentAwakeCore
 
 func log(_ s: String) { FileHandle.standardError.write(Data("[agentawake-helper] \(s)\n".utf8)) }
 
+/// The app bundle this helper ships in (Contents/MacOS/agentawake-helper).
+let helperVersion = Bundle(url: URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
+    .deletingLastPathComponent().deletingLastPathComponent())?.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+
 func ownTeamID() -> String? {
     var code: SecCode?
     var staticCode: SecStaticCode?
@@ -26,7 +30,7 @@ final class Service: NSObject, SleepControlProtocol {
         reply(r.ok, r.reason)
     }
     func release(reply: @escaping () -> Void) { guardian.release(); reply() }
-    func version(reply: @escaping (String) -> Void) { reply("1") }
+    func version(reply: @escaping (String) -> Void) { reply(helperVersion) }
 }
 
 final class Delegate: NSObject, NSXPCListenerDelegate {
@@ -61,11 +65,33 @@ guard let team = ownTeamID() else {
 let requirement = "anchor apple generic and identifier \"\(Identity.appID)\" and certificate leaf[subject.OU] = \"\(team)\""
 
 let guardian = SleepGuard()
+guardian.onSleep = { log("lid closed and lid-closed mode off: sleeping now") }
 guardian.recoverFromCrash()
+
+/// Identity of a file on disk (inode and modification time); nil if it's missing or not executable.
+func fileStamp(_ path: String) -> String? {
+    var st = stat()
+    guard stat(path, &st) == 0, access(path, X_OK) == 0 else { return nil }
+    return "\(st.st_ino):\(st.st_mtimespec.tv_sec):\(st.st_mtimespec.tv_nsec)"
+}
+
+// Updating the app replaces this binary, but launchd keeps the old process running until a reboot. Exit once the
+// new binary is in place and stable for a tick, so launchd (KeepAlive) starts it. The marker file makes the new
+// process undo the setting, and the app's next renewal (every 30 s) asks again.
+let exe = Bundle.main.executablePath ?? CommandLine.arguments[0]
+let started = fileStamp(exe)
+var seenNew: String?
 
 let t = DispatchSource.makeTimerSource(queue: .global())
 t.schedule(deadline: .now() + 5, repeating: 5)
-t.setEventHandler { if let why = guardian.tick() { log("lid-closed mode stopped: \(why)") } }
+t.setEventHandler {
+    if let why = guardian.tick() { log("lid-closed mode stopped: \(why)") }
+    let now = fileStamp(exe)
+    if let now, now != started {
+        if seenNew == now { log("app updated: restarting into the new helper"); exit(0) }
+        seenNew = now
+    }
+}
 t.resume()
 
 let delegate = Delegate(guardian, requirement: requirement)

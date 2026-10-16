@@ -112,11 +112,13 @@ final class Model: ObservableObject {
         }
         g.start()
         let log = StrainLog()
-        history = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [g, power] _ in
+        history = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [g, power, lid] _ in
             let (s, holding) = g.report()
             let agents = e.store.list().filter { $0.name != Engine.manualName }.count
+            let lidMode = lid.isHeld
             DispatchQueue.global(qos: .utility).async {
-                log.append(strain: s, holding: holding, agents: agents, power: power.read(), lidClosed: StrainLog.lidClosed())
+                log.append(strain: s, holding: holding, agents: agents, power: power.read(),
+                           lidClosed: Clamshell().isClosed(), lidMode: lidMode)
             }
         }
         do { try server.start(); e.start() } catch SocketError.alreadyRunning {
@@ -146,20 +148,12 @@ final class Model: ObservableObject {
         assertions.herdrFollowsPanes = herdrWatch && herdrPath != nil
         guard herdrWatch, let path = herdrPath else { return }
         let w = HerdrWatcher(engine: engine) { HerdrCLI.listAgents(herdr: path) }
-        w.skipAgents = hookedAgents
         w.start()
         herdr = w
     }
 
-    /// Agents that report through their own hooks; the herdr and assertion watchers leave them alone.
-    private var hookedAgents: Set<String> {
-        Set(integrations.compactMap { if case .connected = $0.status { return $0.integration.id }; return nil })
-    }
-
     func refreshIntegrations() {
         integrations = Integrations.all().map { IntegrationState(integration: $0, status: $0.status()) }
-        herdr?.skipAgents = hookedAgents
-        assertions.skipAgents = hookedAgents
     }
 
     func connect(_ i: Integration) {

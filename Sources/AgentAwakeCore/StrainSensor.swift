@@ -56,9 +56,9 @@ public final class LiveStrainSensor: StrainSensing {
 
     /// Battery temperature (°C) at which the Mac counts as hot / overheating. macOS's own pressure level stays
     /// nominal well past the point where the case is too hot to touch, so the battery sensor decides earlier.
-    /// Starting values: a battery on a desk under load runs about 35-42 °C; tune from ~/.agent-awake/strain.log.
-    public static let batteryHot: Double = 45
-    public static let batteryOverheating: Double = 50
+    /// From strain.log on a MacBook Pro M4 Pro: 33-38 °C at a desk, 42-43.5 °C after 30-60 min working in a bag.
+    public static let batteryHot: Double = 41
+    public static let batteryOverheating: Double = 44
 
     public func read() -> Strain {
         let pressure = readers.thermalPressure().map(Self.thermalLevel(pressure:))

@@ -91,3 +91,26 @@ extension HerdrWatcherTests {
         XCTAssertEqual(e.store.list().first?.title, "oh-my-pi · shop", "agent and folder only")
     }
 }
+
+extension HerdrWatcherTests {
+    func testPaneWhoseAgentUsesHooksIsLeftToItWithoutAPing() {
+        let (w, e, p, n) = make()
+        w.poll()
+        XCTAssertEqual(e.store.list().map(\.name), ["omp w1:p1"])
+        var r = Request(cmd: "begin", name: "omp:ses_1", agent: "omp", pid: 42)
+        r.pane = "w1:p1"
+        XCTAssertTrue(e.handle(r).ok)
+        w.poll(); w.poll()
+        XCTAssertEqual(e.store.list().map(\.name), ["omp:ses_1"])
+        XCTAssertTrue(p.held); XCTAssertTrue(n.sent.isEmpty)
+    }
+
+    func testHookedHerdrAgentsElsewhereDontStopOlderPanesBeingFollowed() {
+        let (w, e, _, _) = make()
+        var r = Request(cmd: "begin", name: "omp:ses_1", agent: "omp", pid: 42)
+        r.pane = "w9:p3"
+        XCTAssertTrue(e.handle(r).ok)
+        w.poll()
+        XCTAssertEqual(Set(e.store.list().map(\.name)), ["omp:ses_1", "omp w1:p1"])
+    }
+}

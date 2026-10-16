@@ -26,7 +26,8 @@ mkdir -p "$STATE"
 
 log() { echo "$(date '+%F %T') $*"; }
 notify() { osascript -e "display notification \"$1\" with title \"Agent Awake release\"" 2>/dev/null || true; log "$1"; }
-unschedule() { launchctl bootout "gui/$(id -u)/$JOB" 2>/dev/null || true; rm -f "$PLIST"; }
+# Plist first: when the job unschedules itself, bootout ends this very script.
+unschedule() { rm -f "$PLIST"; launchctl bootout "gui/$(id -u)/$JOB" 2>/dev/null || true; }
 
 if [ "${1:-}" = "--schedule" ]; then
   cat > "$PLIST" <<EOF
@@ -50,6 +51,12 @@ EOF
   launchctl bootout "gui/$(id -u)/$JOB" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" "$PLIST"
   echo "scheduled; log: $STATE/log"
+  exit 0
+fi
+
+if [ -e "$STATE/released" ]; then
+  echo "v$VERSION is already released"
+  unschedule
   exit 0
 fi
 

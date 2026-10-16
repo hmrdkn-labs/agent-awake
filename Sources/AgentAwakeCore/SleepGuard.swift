@@ -3,15 +3,20 @@ import IOKit.ps
 
 public protocol SleepSettingRunner {
     func setSleepDisabled(_ on: Bool) -> Bool
+    /// Sleep the Mac now (`pmset sleepnow`); idle-sleep assertions don't block it.
+    func sleepNow() -> Bool
 }
 
-/// Runs `/usr/bin/pmset disablesleep 0|1` with fixed arguments. Needs root.
+/// Runs `/usr/bin/pmset` with fixed arguments. Needs root.
 public struct PMSetRunner: SleepSettingRunner {
     public init() {}
-    public func setSleepDisabled(_ on: Bool) -> Bool {
+    public func setSleepDisabled(_ on: Bool) -> Bool { run(["disablesleep", on ? "1" : "0"]) }
+    public func sleepNow() -> Bool { run(["sleepnow"]) }
+
+    private func run(_ args: [String]) -> Bool {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
-        p.arguments = ["disablesleep", on ? "1" : "0"]
+        p.arguments = args
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         do { try p.run() } catch { return false }
@@ -59,17 +64,26 @@ public final class SleepGuard {
 
     private let runner: SleepSettingRunner
     private let power: PowerStateReading
+    private let lid: ClamshellReading
+    private let after: (Double, @escaping () -> Void) -> Void
     private let now: () -> Double
     private let markerPath: String
     private let lock = NSLock()
     private var disabled = false
     private var deadline: Double = 0
+    /// Called when a closed-lid Mac was put to sleep after the setting was restored.
+    public var onSleep: (() -> Void)?
 
     public init(runner: SleepSettingRunner = PMSetRunner(),
                 power: PowerStateReading = SystemPowerState(),
+                lid: ClamshellReading = Clamshell(),
                 markerPath: String = Identity.markerPath,
+                after: @escaping (Double, @escaping () -> Void) -> Void = { d, f in
+                    DispatchQueue.global().asyncAfter(deadline: .now() + d, execute: f)
+                },
                 now: @escaping () -> Double = { Date().timeIntervalSince1970 }) {
-        self.runner = runner; self.power = power; self.markerPath = markerPath; self.now = now
+        self.runner = runner; self.power = power; self.lid = lid; self.markerPath = markerPath
+        self.after = after; self.now = now
     }
 
     public var isHolding: Bool { lock.lock(); defer { lock.unlock() }; return disabled }
@@ -127,6 +141,22 @@ public final class SleepGuard {
         if runner.setSleepDisabled(false) {
             disabled = false
             try? FileManager.default.removeItem(atPath: markerPath)
+            after(SleepGuard.settle) { [weak self] in self?.sleepIfLidClosed() }
         }
+    }
+
+    /// How long macOS gets to re-evaluate the lid after the setting changes.
+    public static let settle: Double = 2
+
+    /// macOS decides to sleep when the lid closes. If that happened while the setting was on (agents working
+    /// in a bag), restoring it later doesn't sleep the Mac: it stays awake, hot and draining, until the lid
+    /// opens. So once the setting is off, a closed lid that would normally sleep the Mac does it now.
+    /// Not with an external display in use: then macOS keeps a closed Mac awake itself.
+    private func sleepIfLidClosed() {
+        lock.lock()
+        let stillOff = !disabled
+        lock.unlock()
+        guard stillOff, lid.isClosed() == true, lid.closedCausesSleep() == true else { return }
+        if runner.sleepNow() { onSleep?() }
     }
 }

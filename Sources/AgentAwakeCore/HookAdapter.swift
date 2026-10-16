@@ -14,6 +14,14 @@ import Foundation
 public enum HookAdapter {
     public static func requests(agent: String, event: String, payload: Data, env: [String: String],
                                 agentPID: Int32?, config: Config) -> [Request] {
+        // An agent running in a herdr pane: the herdr watcher leaves that pane to us.
+        let pane = env["HERDR_PANE_ID"].flatMap { $0.isEmpty ? nil : $0 }
+        return interpret(agent: agent, event: event, payload: payload, env: env, agentPID: agentPID, config: config)
+            .map { var r = $0; r.pane = pane; return r }
+    }
+
+    static func interpret(agent: String, event: String, payload: Data, env: [String: String],
+                          agentPID: Int32?, config: Config) -> [Request] {
         guard let spec = AgentCatalog.spec(agent), var action = spec.action(for: event) else { return [] }
         let p: Payload
         if payload.allSatisfy({ $0 == 32 || $0 == 9 || $0 == 10 || $0 == 13 }) {

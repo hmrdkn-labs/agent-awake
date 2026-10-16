@@ -4,10 +4,17 @@ import XCTest
 final class FakeRunner: SleepSettingRunner {
     var calls: [Bool] = []
     var failOff = false
+    var slept = 0
     func setSleepDisabled(_ on: Bool) -> Bool {
         if !on && failOff { return false }
         calls.append(on); return true
     }
+    func sleepNow() -> Bool { slept += 1; return true }
+}
+final class FakeLid: ClamshellReading {
+    var closed: Bool? = false, causesSleep: Bool? = true
+    func isClosed() -> Bool? { closed }
+    func closedCausesSleep() -> Bool? { causesSleep }
 }
 final class FakePowerState: PowerStateReading {
     var s = PowerState(onBattery: false, batteryPercent: 80, thermalHot: false)
@@ -23,9 +30,38 @@ final class FakeController: SleepControlling {
 final class SleepGuardTests: XCTestCase {
     var t = 1000.0
     let marker = NSTemporaryDirectory() + "sw-marker-\(UUID().uuidString)"
+    let lid = FakeLid()
+    var later: [() -> Void] = []
     func make() -> (SleepGuard, FakeRunner, FakePowerState) {
         let r = FakeRunner(), p = FakePowerState()
-        return (SleepGuard(runner: r, power: p, markerPath: marker, now: { self.t }), r, p)
+        return (SleepGuard(runner: r, power: p, lid: lid, markerPath: marker, after: { _, f in self.later.append(f) },
+                           now: { self.t }), r, p)
+    }
+    func settle() { let l = later; later = []; l.forEach { $0() } }
+
+    func testReleaseWithLidClosedSleepsTheMac() {
+        let (g, r, p) = make()
+        XCTAssertTrue(g.acquire(lease: 60).ok)
+        lid.closed = true
+        p.s = PowerState(onBattery: true, batteryPercent: 9, thermalHot: false)
+        g.tick(); settle()
+        XCTAssertEqual(r.slept, 1, "macOS won't sleep on its own: the lid closed while the setting was on")
+    }
+
+    func testNoSleepWithLidOpenOrExternalDisplay() {
+        let (g, r, _) = make()
+        XCTAssertTrue(g.acquire(lease: 60).ok); g.release(); settle()
+        lid.closed = true; lid.causesSleep = false   // closed with an external display: a desk setup
+        XCTAssertTrue(g.acquire(lease: 60).ok); g.release(); settle()
+        XCTAssertEqual(r.slept, 0)
+    }
+
+    func testReacquiredBeforeSettleDoesNotSleep() {
+        let (g, r, _) = make()
+        lid.closed = true
+        XCTAssertTrue(g.acquire(lease: 60).ok); g.release()
+        XCTAssertTrue(g.acquire(lease: 60).ok); settle()
+        XCTAssertEqual(r.slept, 0)
     }
     override func tearDown() { try? FileManager.default.removeItem(atPath: marker) }
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.3 (2026-10-16)
+
+- Lid-closed mode now actually sleeps the Mac when it gives up with the lid closed (heat, fast drain, low
+  battery, work done). Before, macOS kept a closed Mac awake once it had closed with the setting on: two
+  bag trips ran on for 20 minutes and 2 hours, draining up to 32% an hour. It stays off until the lid opens.
+- Heat limits lowered to battery 41 °C (hold) and 44 °C (pause), from two days of `strain.log`: 33-38 °C at
+  a desk, 42-43.5 °C in a bag. The old 45 °C was never reached.
+- Connecting an agent no longer drops its sessions that were already running: herdr panes and power
+  assertions are skipped per pane and per process once those report through hooks, not per agent.
+- `strain.log` records whether lid-closed mode is on.
+- The release script no longer runs again at the next login after publishing.
+- The lid-closed helper restarts itself when the app is updated; before, the old helper kept running until a
+  reboot. Updating from 0.1.2 or earlier: restart the Mac once, so the new helper takes over.
+
 ## 0.1.2 (2026-10-13)
 
 - Heat now uses the battery and chip temperatures, not only macOS's thermal level, which stayed "nominal"

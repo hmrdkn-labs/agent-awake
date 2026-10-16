@@ -8,10 +8,10 @@ public final class SessionStore {
 
     public init() {}
 
-    public func begin(_ name: String, label: String? = nil, agent: String? = nil, pid: Int32? = nil,
+    public func begin(_ name: String, label: String? = nil, agent: String? = nil, pid: Int32? = nil, pane: String? = nil,
                       timeout: Double, now: Double) {
         lock.lock(); defer { lock.unlock() }
-        sessions[name] = SessionInfo(name: name, label: label, agent: agent, pid: pid, state: .working,
+        sessions[name] = SessionInfo(name: name, label: label, agent: agent, pid: pid, pane: pane, state: .working,
                                      startedAt: now, lastBeat: now, timeout: max(0, timeout))
     }
 

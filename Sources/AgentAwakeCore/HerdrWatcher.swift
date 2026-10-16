@@ -106,13 +106,6 @@ public final class HerdrWatcher {
         for (_, v) in all { _ = engine.handle(Request(cmd: "done", name: v.name, kind: .ended)) }
     }
 
-    /// Agents whose own hooks report to us (connected integrations); herdr would only double-count them.
-    public var skipAgents: Set<String> {
-        get { lock.lock(); defer { lock.unlock() }; return skip }
-        set { lock.lock(); skip = newValue; lock.unlock() }
-    }
-    private var skip: Set<String> = []
-
     public func poll() {
         let agents: [AgentSnapshot]
         if !isRunning() {
@@ -121,9 +114,16 @@ public final class HerdrWatcher {
             guard let data = fetch(), let a = HerdrCLI.parse(data, taskTitles: taskTitles()) else { return }   // unreachable: change nothing
             agents = a
         }
+        // Panes whose agent reports through its own hooks (they carry HERDR_PANE_ID): counting them again here
+        // would double them. Decided per pane, not per agent, so sessions started before Connect stay followed.
+        let hooked = Set(engine.store.list().compactMap(\.pane))
         lock.lock(); defer { lock.unlock() }
         let byPane = Dictionary(agents.map { ($0.paneID, $0) }, uniquingKeysWith: { a, _ in a })
-        for a in agents where a.status == "working" && !skip.contains(a.agent) {
+        for (pane, t) in tracked where hooked.contains(pane) {
+            tracked[pane] = nil
+            _ = engine.handle(Request(cmd: "done", name: t.name, kind: .ended))   // the hooked session took over
+        }
+        for a in agents where a.status == "working" && !hooked.contains(a.paneID) {
             if var t = tracked[a.paneID] {
                 t.quiet = 0; t.last = a.status; tracked[a.paneID] = t
                 _ = engine.handle(Request(cmd: "beat", name: t.name, label: a.label, agent: a.agent, timeout: sessionTimeout))
@@ -133,7 +133,7 @@ public final class HerdrWatcher {
                 _ = engine.handle(Request(cmd: "begin", name: name, label: a.label, agent: a.agent, timeout: sessionTimeout))
             }
         }
-        for (pane, t) in tracked where byPane[pane]?.status != "working" || skip.contains(byPane[pane]?.agent ?? "") {
+        for (pane, t) in tracked where byPane[pane]?.status != "working" {
             let status = byPane[pane]?.status ?? "closed"
             var n = t; n.quiet += 1; n.last = status
             if n.quiet >= quietPolls {

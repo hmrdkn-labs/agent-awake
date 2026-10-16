@@ -234,7 +234,7 @@ struct GeneralTab: View {
                         if model.helper == .needsApproval { Button("Approve in System Settings…") { HelperInstaller.openSettings() } }
                     }
                 }
-                Text("Turns itself off when work ends, at 10% battery, when the battery passes 45 °C, or when it drains faster than 20% an hour, so a Mac in a bag goes to sleep.")
+                Text("Turns itself off when work ends, at 10% battery, when the battery passes 41 °C, or when it drains faster than 20% an hour. With the lid closed the Mac then sleeps, and stays off until you open the lid.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("When the Mac is hot or memory is almost full") {
@@ -249,7 +249,7 @@ struct GeneralTab: View {
                     Text("Only notify me").tag(Config.MemoryRelief.none)
                 }
                 Text("Only builds, tests and other processes your agents started are touched, never the agents or your apps. "
-                     + "Hot means a battery over 45 °C or macOS slowing the chip: their work runs at low priority, and over 50 °C it's paused "
+                     + "Hot means a battery over 41 °C or macOS slowing the chip: their work runs at low priority, and over 44 °C it's paused "
                      + "until the Mac cools. Paused processes continue when memory recovers. History: ~/.agent-awake/strain.log")
                     .font(.caption).foregroundStyle(.secondary)
             }
