@@ -116,10 +116,11 @@ if ! gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
 Keeps your Mac awake while AI coding agents work, lets it sleep when they finish, and pings your phone.
 $changes
 
-Open the DMG, drag Agent Awake to Applications, and open it. Signed with Developer ID and notarized by Apple.
-Requires macOS 13 or later.
+Open the DMG, drag Agent Awake to Applications, and open it, or \`brew install --cask hmrdkn-labs/tap/agent-awake\`.
+Signed with Developer ID and notarized by Apple. Requires macOS 13 or later.
 EOF
 fi
+scripts/update-cask.sh "$VERSION" "$DMG"
 notify "Released v$VERSION: https://github.com/$REPO/releases/tag/v$VERSION"
 rm -f "$STATE/app.zip"
 touch "$STATE/released"

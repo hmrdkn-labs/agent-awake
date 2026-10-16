@@ -47,8 +47,13 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
 ## Install
 
 Download the DMG from the [latest release](https://github.com/hmrdkn-labs/agent-awake/releases/latest),
-drag **Agent Awake** to Applications and open it. It's signed with Developer ID and notarized by Apple.
-Requires macOS 13 or later, on Apple silicon or Intel.
+drag **Agent Awake** to Applications and open it. Or with Homebrew:
+
+```sh
+brew install --cask hmrdkn-labs/tap/agent-awake
+```
+
+It's signed with Developer ID and notarized by Apple. Requires macOS 13 or later, on Apple silicon or Intel.
 
 The first launch opens a short setup window: connect the agents it found, set up phone pings, and
 optionally turn on lid-closed mode. The app then lives in the menu bar as a moon. If you can't find it,
