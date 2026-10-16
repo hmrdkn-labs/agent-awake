@@ -225,6 +225,7 @@ struct GeneralTab: View {
     var body: some View {
         Form {
             Toggle("Launch at login", isOn: $model.launchAtLogin)
+            Toggle("Check for updates automatically", isOn: $model.checksForUpdates)
             Section {
                 Toggle("Stay awake with the lid closed while agents work", isOn: $model.lidMode)
                 if model.lidMode {
@@ -269,8 +270,12 @@ struct GeneralTab: View {
             }
             Section {
                 Button("Show the setup guide") { WelcomeWindow.show() }
-                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")")
-                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Check for Updates…") { Updates.checkForUpdates() }
+                }
             }
         }
         .formStyle(.grouped)

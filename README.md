@@ -55,6 +55,8 @@ brew install --cask hmrdkn-labs/tap/agent-awake
 
 It's signed with Developer ID and notarized by Apple. Requires macOS 13 or later, on Apple silicon or Intel.
 
+Updates arrive by themselves: the app checks GitHub for new versions and installs them in place (Settings → General turns that off).
+
 The first launch opens a short setup window: connect the agents it found, set up phone pings, and
 optionally turn on lid-closed mode. The app then lives in the menu bar as a moon. If you can't find it,
 open the app again to bring the window back.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build and sign "dist/Agent Awake.app" (app + CLI + privileged helper).
+# Build and sign "dist/Agent Awake.app" (app + CLI + privileged helper + Sparkle updater).
 #   SIGN_IDENTITY  codesign identity, e.g. "Developer ID Application: Name (TEAMID)" (required for release)
 #                  or "Apple Development: ..." for local testing. Ad-hoc ("-") cannot run the helper.
 #   VERSION        marketing version, default 0.1.0; the build number is the commit count (always increases)
@@ -20,6 +20,9 @@ BIN=$(swift build -c release $ARCHS --show-bin-path)
 
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchDaemons"
 cp "$BIN/AgentAwakeApp" "$BIN/agentawake" "$BIN/agentawake-helper" "$APP/Contents/MacOS/"
+# Sparkle 2 (automatic updates) goes in Contents/Frameworks, where the app's @executable_path/../Frameworks rpath looks.
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$BIN/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@BUILD@/$(git rev-list --count HEAD)/g" Resources/Info.plist > "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp -R Resources/AgentIcons "$APP/Contents/Resources/"
@@ -30,6 +33,15 @@ cp Resources/com.hamardikan.agent-awake.helper.plist "$APP/Contents/Library/Laun
 sign() { codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$@"; }
 sign --identifier com.hamardikan.agent-awake.helper "$APP/Contents/MacOS/agentawake-helper"
 sign --identifier com.hamardikan.agent-awake.cli "$APP/Contents/MacOS/agentawake"
+# Sparkle's own code, inside-out, as its docs prescribe (sparkle-project.org/documentation/sandboxing/#code-signing).
+SP="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+for x in "$SP"/XPCServices/*.xpc; do
+  [ -e "$x" ] || continue
+  sign --preserve-metadata=entitlements "$x"
+done
+sign "$SP/Autoupdate"
+sign "$SP/Updater.app"
+sign "$APP/Contents/Frameworks/Sparkle.framework"
 sign "$APP"
-codesign --verify --strict --verbose=2 "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
 echo "built $APP"

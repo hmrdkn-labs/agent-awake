@@ -41,6 +41,13 @@ final class Model: ObservableObject {
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
+    /// Check GitHub for new versions in the background (Sparkle; Settings > General). Mirrors Sparkle's own setting.
+    @Published var checksForUpdates = true {
+        didSet {
+            guard checksForUpdates != oldValue else { return }
+            Updates.controller.updater.automaticallyChecksForUpdates = checksForUpdates
+        }
+    }
     @Published var cliInstalled = CLIInstaller.isInstalled
     /// Saved config; the Settings window edits a draft and saves through `saveConfig`.
     @Published private(set) var config: Config
@@ -126,6 +133,8 @@ final class Model: ObservableObject {
             _ = try? Client.send(Request(cmd: "show"))
             exit(0)
         } catch { self.error = "\(error)" }
+        // Sparkle starts here, after the socket check: a second copy exits above and never starts an updater.
+        checksForUpdates = Updates.controller.updater.automaticallyChecksForUpdates
         // Hooks call ~/.agent-awake/bin/agentawake; keep it pointing at this copy of the app.
         if CLIInstaller.canInstall {
             do { try Integrations.installShim(cliPath: CLIInstaller.source) } catch { self.error = "Hook command: \(error.localizedDescription)" }

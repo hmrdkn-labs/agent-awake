@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The app updates itself: it checks GitHub for new versions in the background and installs them in place
+  (Sparkle 2, EdDSA-signed). Turn it off in Settings → General, or check now with "Check for Updates…".
+
 ## 0.1.3 (2026-10-16)
 
 - Lid-closed mode now actually sleeps the Mac when it gives up with the lid closed (heat, fast drain, low

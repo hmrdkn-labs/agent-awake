@@ -13,6 +13,9 @@
     <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
+    <key>SUFeedURL</key><string>https://github.com/hmrdkn-labs/agent-awake/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>Jj0uDPd57tcZsxdN6Zm2OWfSH5y+rtaLdNIw/nESo/Q=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
     <key>NSHumanReadableCopyright</key><string>Copyright © 2026 hamardikan. MIT License.</string>
 </dict>
 </plist>
