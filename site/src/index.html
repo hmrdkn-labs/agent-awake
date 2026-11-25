@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Awake: keeps your Mac awake while your agents work</title>
+<meta name="description" content="Agent Awake is a Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
+<link rel="canonical" href="https://agentawake.hamardikan.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Agent Awake">
+<meta property="og:title" content="Agent Awake: keeps your Mac awake while your agents work">
+<meta property="og:description" content="A Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
+<meta property="og:url" content="https://agentawake.hamardikan.com/">
+<meta property="og:image" content="https://agentawake.hamardikan.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Agent Awake Settings window listing agents and their connection state, beside the name Agent Awake.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Agent Awake: keeps your Mac awake while your agents work">
+<meta name="twitter:description" content="A Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
+<meta name="twitter:image" content="https://agentawake.hamardikan.com/og.png">
+<meta name="theme-color" content="#f4efe4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1a18" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="top wrap">
+  <img class="mark" src="/assets/img/icon-64.webp" srcset="/assets/img/icon-64.webp 64w, /assets/img/icon-128.webp 128w" sizes="48px" width="48" height="48" alt="">
+  <p class="name">Agent Awake</p>
+</header>
+
+<main id="main">
+
+<section class="hero wrap" aria-labelledby="h-hero">
+  <div class="hero-text">
+    <h1 id="h-hero">Your Mac stays awake while your agents work.</h1>
+    <p class="lede">When the last one finishes, it sleeps again. Agent Awake pings your phone if you are away.</p>
+
+    <div class="install">
+      <p class="lbl" id="brew-lbl">Install with Homebrew</p>
+      <div class="cmd">
+        <code id="brew-cmd" aria-labelledby="brew-lbl">brew install --cask <span class="nb">hmrdkn-labs/tap/agent-awake</span></code>
+        <button type="button" class="copy" id="copy-btn" data-target="brew-cmd" hidden>Copy</button>
+      </div>
+      <p class="live" id="copy-note" role="status" aria-live="polite"></p>
+      <p class="or">Or download the disk image:</p>
+      <p><a class="btn" href="https://github.com/hmrdkn-labs/agent-awake/releases/latest">{{DOWNLOAD_LABEL}}</a></p>
+      <p class="fine">Signed and notarised by Apple. macOS 13 or later, on Apple silicon or Intel. It updates itself; Settings → General turns that off.</p>
+      <p class="fine">{{CASK_LINE}}</p>
+    </div>
+  </div>
+  <figure class="hero-shot">
+    <img src="/assets/img/setup-420.webp" srcset="/assets/img/setup-420.webp 420w, /assets/img/setup-840.webp 840w" sizes="(min-width: 900px) 420px, min(420px, calc(100vw - 48px))" width="420" height="464" alt="The Agent Awake setup window: the app icon, the name, and three points. Awake only while agents work. Pinged when it matters. Lives in the menu bar.">
+  </figure>
+</section>
+
+<section class="sec wrap" id="trip" aria-labelledby="h-trip">
+  <p class="chan" aria-hidden="true">ch 1 · trip</p>
+  <div class="sec-grid">
+    <h2 id="h-trip">One trip in a bag</h2>
+    <div class="sec-body">
+      <p class="prose">Version 0.1.2, 75 minutes in a bag. The battery went from 100% to 59%. macOS’s own heat level stayed nominal the whole time, so the app now reads the battery too.</p>
+
+      <div class="strip" id="strip">
+        <figure class="strip-fig">
+          <!-- Wide chart: x is minutes (60 to 480 for 0 to 75), y is battery % (304 to 64 for 0 to 100), the ruler on the right is battery °C (30 to 50). Narrow chart below: same numbers, stacked for a phone. -->
+          <svg class="chart chart-wide" viewBox="0 0 700 388" role="img" aria-labelledby="tw-title tw-desc">
+            <title id="tw-title">Bag trip, version 0.1.2: battery 100% to 59% in 75 minutes</title>
+            <desc id="tw-desc">A strip chart. Two battery readings, 100% at minute 0 and 59% at minute 75, are joined by a dashed line. Nothing in between was recorded. macOS’s thermal level was nominal for the whole trip. Marks show the 10% floor, the serious thermal state, the 41 °C battery limit and the drain slope of 20% an hour.</desc>
+            <defs>
+              <mask id="mw" maskUnits="userSpaceOnUse" x="0" y="0" width="700" height="388">
+                <path class="draw" d="M60 64 L480 162.4" pathLength="1" fill="none" stroke="#fff" stroke-width="10"/>
+              </mask>
+            </defs>
+            <rect class="paper" x="0.5" y="0.5" width="699" height="387"/>
+            <line class="perf" x1="12" y1="9" x2="690" y2="9"/>
+            <line class="perf" x1="12" y1="379" x2="690" y2="379"/>
+            <text class="t" x="12" y="24">Agent Awake 0.1.2 · bag trip</text>
+            <text class="t red" x="480" y="24" text-anchor="end">battery %</text>
+
+            <g class="grid">
+              <line x1="60" y1="64" x2="480" y2="64"/><line x1="60" y1="124" x2="480" y2="124"/><line x1="60" y1="184" x2="480" y2="184"/><line x1="60" y1="244" x2="480" y2="244"/>
+              <line x1="144" y1="64" x2="144" y2="304"/><line x1="228" y1="64" x2="228" y2="304"/><line x1="312" y1="64" x2="312" y2="304"/><line x1="396" y1="64" x2="396" y2="304"/><line x1="480" y1="64" x2="480" y2="304"/>
+            </g>
+            <g class="axis">
+              <line x1="60" y1="64" x2="60" y2="304"/><line x1="60" y1="304" x2="480" y2="304"/>
+              <path d="M60 304v6M88 304v3M116 304v3M144 304v6M172 304v3M200 304v3M228 304v6M256 304v3M284 304v3M312 304v6M340 304v3M368 304v3M396 304v6M424 304v3M452 304v3M480 304v6"/>
+            </g>
+            <g class="t mute">
+              <text x="52" y="309" text-anchor="end">0</text><text x="52" y="249" text-anchor="end">25</text><text x="52" y="189" text-anchor="end">50</text><text x="52" y="129" text-anchor="end">75</text><text x="52" y="69" text-anchor="end">100</text>
+              <text x="60" y="326" text-anchor="middle">0</text><text x="144" y="326" text-anchor="middle">15</text><text x="228" y="326" text-anchor="middle">30</text><text x="312" y="326" text-anchor="middle">45</text><text x="396" y="326" text-anchor="middle">60</text><text x="480" y="326" text-anchor="middle">75</text>
+              <text x="492" y="326">min</text>
+            </g>
+
+            <g data-mark="floor">
+              <line class="mk ink" x1="60" y1="280" x2="480" y2="280"/>
+              <text class="t lb" x="476" y="274" text-anchor="end">10% floor</text>
+            </g>
+            <g data-mark="drain">
+              <line class="mk ink" x1="60" y1="64" x2="480" y2="124"/>
+              <text class="t lb" x="476" y="88" text-anchor="end">20% an hour from 100%</text>
+            </g>
+
+            <line class="leader" x1="100" y1="76" x2="100" y2="203"/>
+            <text class="t" x="84" y="218">Two readings. Nothing in between</text>
+            <text class="t" x="84" y="236">was recorded.</text>
+            <path class="chord red" d="M60 64 L480 162.4" mask="url(#mw)"/>
+            <circle class="dot red" cx="60" cy="64" r="5.5"/>
+            <text class="t red lb" x="70" y="58">100%</text>
+            <g class="late endpt">
+              <circle class="dot red" cx="480" cy="162.4" r="5.5"/>
+              <text class="t red lb" x="476" y="184" text-anchor="end">59%</text>
+            </g>
+            <text class="t late final" x="340" y="152" text-anchor="end">32.8% an hour on average</text>
+
+            <g data-mark="thermal">
+              <rect class="mk band" x="60" y="340" width="420" height="24"/>
+              <text class="t blue lb nohalo" x="270" y="357" text-anchor="middle">macOS thermal level: nominal</text>
+            </g>
+
+            <g class="ruler">
+              <text class="t" x="532" y="52">battery °C</text>
+              <line class="axis-l" x1="540" y1="64" x2="540" y2="304"/>
+              <path class="axis-l" d="M532 304h8M532 244h8M532 184h8M532 124h8M532 64h8"/>
+              <g class="t mute"><text x="526" y="309" text-anchor="end">30</text><text x="526" y="189" text-anchor="end">40</text><text x="526" y="69" text-anchor="end">50</text></g>
+              <rect class="range" x="541" y="208" width="7" height="60"/>
+              <rect class="range" x="541" y="142" width="7" height="18"/>
+              <text class="t" x="562" y="243">desk 33–38 °C</text>
+              <text class="t" x="562" y="157">bag 42–43.5 °C</text>
+              <g data-mark="heat">
+                <line class="mk ink" x1="540" y1="172" x2="556" y2="172"/>
+                <text class="t lb" x="562" y="178">hold 41 °C</text>
+              </g>
+              <line class="axis-l" x1="540" y1="136" x2="556" y2="136"/>
+              <text class="t" x="562" y="132">pause 44 °C</text>
+              <text class="t mute" x="540" y="332">not read on</text>
+              <text class="t mute" x="540" y="350">this trip</text>
+            </g>
+          </svg>
+
+          <svg class="chart chart-narrow" viewBox="0 0 300 490" role="img" aria-labelledby="tn-title tn-desc">
+            <title id="tn-title">Bag trip, version 0.1.2: battery 100% to 59% in 75 minutes</title>
+            <desc id="tn-desc">A strip chart. Two battery readings, 100% at minute 0 and 59% at minute 75, are joined by a dashed line. Nothing in between was recorded. macOS’s thermal level was nominal for the whole trip. Marks show the 10% floor, the serious thermal state, the 41 °C battery limit and the drain slope of 20% an hour.</desc>
+            <defs>
+              <mask id="mn" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="490">
+                <path class="draw" d="M54 40 L286 122" pathLength="1" fill="none" stroke="#fff" stroke-width="10"/>
+              </mask>
+            </defs>
+            <rect class="paper" x="0.5" y="0.5" width="299" height="489"/>
+            <line class="perf" x1="10" y1="9" x2="290" y2="9"/>
+            <line class="perf" x1="10" y1="481" x2="290" y2="481"/>
+            <text class="t" x="10" y="26">0.1.2 · bag trip</text>
+            <text class="t red" x="286" y="26" text-anchor="end">battery %</text>
+
+            <g class="grid">
+              <line x1="54" y1="40" x2="286" y2="40"/><line x1="54" y1="90" x2="286" y2="90"/><line x1="54" y1="140" x2="286" y2="140"/><line x1="54" y1="190" x2="286" y2="190"/>
+              <line x1="100.4" y1="40" x2="100.4" y2="240"/><line x1="146.8" y1="40" x2="146.8" y2="240"/><line x1="193.2" y1="40" x2="193.2" y2="240"/><line x1="239.6" y1="40" x2="239.6" y2="240"/><line x1="286" y1="40" x2="286" y2="240"/>
+            </g>
+            <g class="axis">
+              <line x1="54" y1="40" x2="54" y2="240"/><line x1="54" y1="240" x2="286" y2="240"/>
+              <path d="M54 240v6M100.4 240v6M146.8 240v6M193.2 240v6M239.6 240v6M286 240v6"/>
+            </g>
+            <g class="t mute">
+              <text x="45" y="245" text-anchor="end">0</text><text x="45" y="195" text-anchor="end">25</text><text x="45" y="145" text-anchor="end">50</text><text x="45" y="95" text-anchor="end">75</text><text x="45" y="45" text-anchor="end">100</text>
+              <text x="54" y="264" text-anchor="middle">0</text><text x="100.4" y="264" text-anchor="middle">15</text><text x="146.8" y="264" text-anchor="middle">30</text><text x="193.2" y="264" text-anchor="middle">45</text><text x="239.6" y="264" text-anchor="middle">60</text><text x="286" y="264" text-anchor="middle">75</text>
+              <text x="54" y="282">minutes in the bag</text>
+            </g>
+
+            <g data-mark="floor">
+              <line class="mk ink" x1="54" y1="220" x2="286" y2="220"/>
+              <text class="t lb" x="286" y="214" text-anchor="end">10% floor</text>
+            </g>
+            <g data-mark="drain">
+              <line class="mk ink" x1="54" y1="40" x2="286" y2="90"/>
+              <text class="t lb" x="286" y="44" text-anchor="end">20% an hour from 100%</text>
+            </g>
+
+            <line class="leader" x1="62" y1="47" x2="62" y2="164"/>
+            <text class="t" x="62" y="178">Two readings. Nothing in</text>
+            <text class="t" x="62" y="196">between was recorded.</text>
+            <path class="chord red" d="M54 40 L286 122" mask="url(#mn)"/>
+            <circle class="dot red" cx="54" cy="40" r="5.5"/>
+            <g class="late endpt">
+              <circle class="dot red" cx="286" cy="122" r="5.5"/>
+              <text class="t red lb" x="282" y="104" text-anchor="end">59%</text>
+            </g>
+            <text class="t late final" x="286" y="140" text-anchor="end">32.8% an hour on average</text>
+
+            <g data-mark="thermal">
+              <rect class="mk band" x="54" y="294" width="232" height="24"/>
+              <text class="t blue lb nohalo" x="170" y="311" text-anchor="middle">thermal level: nominal</text>
+            </g>
+
+            <g class="ruler">
+              <text class="t" x="54" y="338">battery temperature, °C</text>
+              <text class="t mute" x="54" y="356">not read on this trip</text>
+              <line class="axis-l" x1="54" y1="412" x2="286" y2="412"/>
+              <path class="axis-l" d="M54 412v6M112 412v6M170 412v6M228 412v6M286 412v6"/>
+              <g class="t mute"><text x="54" y="434" text-anchor="middle">30</text><text x="112" y="434" text-anchor="middle">35</text><text x="170" y="434" text-anchor="middle">40</text><text x="228" y="434" text-anchor="middle">45</text><text x="286" y="434" text-anchor="middle">50</text></g>
+              <line class="axis-l" x1="216.4" y1="412" x2="216.4" y2="378"/>
+              <text class="t" x="286" y="374" text-anchor="end">pause 44 °C</text>
+              <g data-mark="heat">
+                <line class="mk ink" x1="181.6" y1="412" x2="181.6" y2="398"/>
+                <text class="t lb" x="177" y="394" text-anchor="end">hold 41 °C</text>
+              </g>
+              <rect class="range" x="88.8" y="446" width="58" height="8"/>
+              <text class="t" x="152" y="455">desk 33–38 °C</text>
+              <rect class="range" x="193.2" y="464" width="17.4" height="8"/>
+              <text class="t" x="187" y="473" text-anchor="end">bag 42–43.5 °C</text>
+            </g>
+          </svg>
+          <figcaption class="cap">Version 0.1.2. One trip, recorded by the author. Source: <code>CHANGELOG.md</code>, lines 26–27. The ruler marks the limits and the author’s measured ranges. It is not a reading from this trip.</figcaption>
+        </figure>
+
+        <div class="strip-text">
+          <table class="readings">
+            <caption>Readings</caption>
+            <thead><tr><th scope="col">Reading</th><th scope="col">Minute</th><th scope="col">Battery</th><th scope="col">macOS thermal level</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Start</th><td>0</td><td>100%</td><td>nominal</td></tr>
+              <tr><th scope="row">End</th><td>75</td><td>59%</td><td>nominal</td></tr>
+            </tbody>
+          </table>
+          <p class="prose small">100 − 59 = 41 points in 75 minutes. 41 ÷ 1.25 h = 32.8% an hour on average.</p>
+
+          <h3 id="h-rules">Four stop rules</h3>
+          <p class="prose small">Lid-closed mode gives sleep back to macOS when any of these holds. Point at one to see its mark on the strip.</p>
+          <ul class="rules" aria-labelledby="h-rules">
+            <li><button type="button" data-rule="floor" aria-pressed="false">The battery reaches 10%.</button></li>
+            <li><button type="button" data-rule="thermal" aria-pressed="false">macOS reports a serious thermal state.</button></li>
+            <li><button type="button" data-rule="heat" aria-pressed="false">The battery passes 41 °C.</button></li>
+            <li><button type="button" data-rule="drain" aria-pressed="false">The battery drains faster than 20% an hour. This trip averaged 32.8%.</button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="does" aria-labelledby="h-does">
+  <p class="chan" aria-hidden="true">ch 2 · behaviour</p>
+  <div class="sec-grid">
+    <h2 id="h-does">What it does</h2>
+    <div class="sec-body prose">
+      <p>It keeps the Mac awake only while an agent is working. When the last agent stops, normal sleep comes back. The screen still turns off and locks.</p>
+      <p>When an agent needs you, the Mac stays awake 15 more minutes, then sleeps.</p>
+      <p>A quiet agent that is still running a build keeps the Mac awake. One whose process exited is let go.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="agents" aria-labelledby="h-agents">
+  <p class="chan" aria-hidden="true">ch 3 · agents</p>
+  <div class="sec-grid">
+    <h2 id="h-agents">Agents</h2>
+    <div class="sec-body">
+      <div class="prose">
+        <p>Connect each one once in Settings. Connecting adds the hooks next to yours and keeps a backup. Disconnect removes exactly what it added. Some agents also tell it when they need you.</p>
+      </div>
+      <table class="agents">
+        <caption class="vh">Agents and the signals each one gives</caption>
+        <thead><tr><th scope="col">Agent</th><th scope="col">Start and done</th><th scope="col">Needs you</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Claude Code</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Codex</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Gemini CLI</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Antigravity</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Qwen Code</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Factory Droid</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">GitHub Copilot</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Devin Local</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">OpenCode</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Kilo Code</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">Cursor</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Windsurf Cascade</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Kiro</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Goose</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Augment (Auggie)</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Junie CLI</th><td>yes</td><td><span aria-hidden="true">—</span><span class="vh">no</span></td></tr>
+          <tr><th scope="row">Amp</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">oh-my-pi</th><td>yes</td><td>yes</td></tr>
+          <tr><th scope="row">pi</th><td>yes</td><td>yes</td></tr>
+        </tbody>
+      </table>
+      <p class="prose small">Without any setup it also notices herdr panes, and oh-my-pi, Codex and Zed turns. Names: <code>Sources/AgentAwakeCore/AgentCatalog.swift</code>. Signals: the agent table in <code>README.md</code>, lines 71–90.</p>
+      <figure class="shot">
+        <img src="/assets/img/agents-560.webp" srcset="/assets/img/agents-560.webp 560w, /assets/img/agents-1120.webp 1120w" sizes="(min-width: 960px) 560px, calc(100vw - 48px)" width="560" height="514" loading="lazy" alt="Agent Awake Settings, Agents tab. Claude Code and Antigravity show Connected. Codex shows One more step. Qwen Code, oh-my-pi and pi show Connect. Under Detected without setup, herdr panes show Automatic.">
+        <figcaption class="cap">Settings → Agents.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="hooks" aria-labelledby="h-hooks">
+  <p class="chan" aria-hidden="true">ch 4 · hooks</p>
+  <div class="sec-grid">
+    <h2 id="h-hooks">Hooks never block an agent</h2>
+    <div class="sec-body prose">
+      <p>The hooks print nothing and exit at once. If the app is not running, they do nothing.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="pings" aria-labelledby="h-pings">
+  <p class="chan" aria-hidden="true">ch 5 · pings</p>
+  <div class="sec-grid">
+    <h2 id="h-pings">Pings</h2>
+    <div class="sec-body prose">
+      <p>Pings go to your phone only while you are away from the Mac: idle, locked or lid closed. At the Mac you get a Mac notification.</p>
+      <p>Send them to ntfy, Bark, Pushover, Telegram, Discord or Slack. By default a ping names only the agent and the project folder.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="lid" aria-labelledby="h-lid">
+  <p class="chan" aria-hidden="true">ch 6 · lid</p>
+  <div class="sec-grid">
+    <h2 id="h-lid">Lid closed, in a bag</h2>
+    <div class="sec-body prose">
+      <p>Lid-closed mode is off by default. You approve its helper once, in System Settings → Login Items.</p>
+      <p>It gives sleep back to macOS at 10% battery, when the thermal state is serious, above battery 41 °C, or on drain faster than 20% an hour. If the lid is closed when it gives up, the Mac sleeps, and lid-closed mode stays off until the lid opens.</p>
+      <p>The 41 °C limit comes from two days of the author’s log on a MacBook Pro M4 Pro: 33–38 °C at a desk, 42–43.5 °C in a bag.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="source" aria-labelledby="h-source">
+  <p class="chan" aria-hidden="true">ch 7 · source</p>
+  <div class="sec-grid">
+    <h2 id="h-source">Source</h2>
+    <div class="sec-body prose">
+      <p>MIT licence. Build it from source with <code>swift build &amp;&amp; swift test</code>. The code is at <a href="https://github.com/hmrdkn-labs/agent-awake">github.com/hmrdkn-labs/agent-awake</a>.</p>
+      <p>It is not in the Mac App Store, because the store’s sandbox forbids the helper.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="status" aria-labelledby="h-status">
+  <p class="chan" aria-hidden="true">ch 8 · status</p>
+  <div class="sec-grid">
+    <h2 id="h-status">Status</h2>
+    <div class="sec-body">
+      <p class="prose small">As of {{BUILD_DATE}}, read from GitHub when this page was built.</p>
+      <dl class="status">
+        <div><dt>Latest release</dt><dd><a href="{{RELEASE_URL}}">{{RELEASE_TAG}}</a>, {{RELEASE_DATE}}</dd></div>
+        <div><dt>CI on main</dt><dd><a href="{{CI_URL}}">{{CI_RESULT}}</a>, {{CI_DATE}}</dd></div>
+        <div><dt>Last push</dt><dd>{{PUSHED_DATE}}</dd></div>
+        <div><dt>Licence</dt><dd>{{LICENCE}}</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot wrap">
+  <p>Maintained {{BUILD_DATE}}. Deploy <code>{{SHA}}</code>.</p>
+  <p><a href="https://github.com/hmrdkn-labs/agent-awake">Repository</a> · <a href="https://hamardikan.com/">hamardikan.com</a></p>
+</footer>
+
+<script src="/assets/strip.js"></script>
+<script src="/assets/copy.js"></script>
+</body>
+</html>
