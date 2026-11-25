@@ -71,13 +71,13 @@ not loop. Reduced motion: nothing moves.
 
 1. Skip link, small header: app icon (from `assets/brand/icon.png`), "Agent Awake".
 2. Hero: h1 "Your Mac stays awake while your agents work." Sub-line. Install block: the brew
-   command with copy, "Download 0.1.4 for Mac" to the latest release, "Signed and notarised by
-   Apple. macOS 13 or later, on Apple silicon or Intel." Real capture: `setup.png`.
+   command with copy, "Download 0.1.4 for Mac" to the latest release, "Signed with Developer ID
+   and notarised by Apple. macOS 13 or later, on Apple silicon or Intel." Real capture: `setup.png`.
 3. One trip in a bag: the strip, its caption, readings table, the four stop rules.
 4. What it does.
 5. Agents: the list from `Sources/AgentAwakeCore/AgentCatalog.swift` (cited), with each agent's
    signal from README.md 71–90. No count printed. Real capture: `settings-agents.png`.
-6. Hooks never block an agent.
+6. Hooks stay out of the way (and the one time they wait).
 7. Pings.
 8. Lid closed, in a bag.
 9. Source: MIT, build from source.
