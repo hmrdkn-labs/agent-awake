@@ -2,7 +2,7 @@
 # Builds site/dist/ from site/src/:
 #   1. reads the living signals with read-only `gh` calls (latest release, CI on main, last push, licence, Homebrew cask version);
 #   2. fails when the cask version differs from the release tag, because the page prints both;
-#   3. fingerprints everything under assets/ plus style.css, strip.js and copy.js (name.<8 hex>.ext) and rewrites the references;
+#   3. fingerprints everything under assets/ plus style.css and page.js (name.<8 hex>.ext) and rewrites the references;
 #   4. fills the {{PLACEHOLDERS}} in index.html with the snapshot, the build date (UTC) and the short git sha;
 #   5. writes dist/deploy.json { at, sha }.
 # A value that could not be read renders as "No data", never a guess. dist/ is built in a temp directory and moved into place.
@@ -110,7 +110,7 @@ rewrite() {
   rm -f "$script"
 }
 
-for name in style.css strip.js copy.js; do
+for name in style.css page.js; do
   tmp="$(mktemp)"
   rewrite "$SRC/$name" > "$tmp"
   new="${name%.*}.$(hash8 "$tmp").${name##*.}"

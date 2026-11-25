@@ -5,85 +5,82 @@ Planned 2026-11-25 from `~/workspace/sandbox/showcase-scan/research/agent-awake.
 
 ## Concept
 
-The page is a **chart-recorder printout of one bag trip**. Agent Awake's whole story is that a Mac
-in a bag lied about its heat, so the app learned to read the battery and to give sleep back. The
-page reads like the paper that comes out of a data logger: a ruled strip with a pen trace, a
-caption with the instrument settings, and the operating notes printed underneath.
+v2 (2026-11-25). The page runs **night to morning**. A Mac left working through the night: a dark room,
+a tall window, one small warm light that means "still awake". Then a night train with the laptop in a
+bag, a phone lighting up on a bedside table, and at the end the same desk at first light with the lid
+closed. Direction: `~/workspace/sandbox/showcase-scan/build/v2/agent-awake/DIRECTION.md`.
 
 ### Reference
 
-Strip-chart recorder paper and cold-chain shipping data loggers: the receipt a temperature logger
-prints after a trip (ruled grid, minute ticks along the edge, one pen colour per channel, a
-stamped header with instrument and date). Honoured in:
+The skill in `build/v2/SKILL-gemini-frontend-design.md` and the owner's five points in `STANDARD.md`:
+full-bleed hero type, two font families, a palette from the subject, custom images, no template chrome.
 
-- **Grid:** the page sits on a 12-column measure with a faint ruled minute grid only inside the
-  strip, never as a page background. Sections are separated by a printed rule with a small
-  channel label, like the edge of a recorder roll.
-- **Type:** Source Serif 4 for reading (a lab report's body text), IBM Plex Mono for every label,
-  axis, value and command (the recorder's printed scale). Both OFL, self-hosted, two families.
-- **Colour:** paper (warm off-white) and graphite ink; one pen red for the battery channel; one
-  pen blue-grey for the thermal channel. Night: graphite paper with light ink, the same two pens
-  lifted to pass AA. No gradients, no glow.
-- **Texture:** hairline rules, tick marks, a perforation edge drawn in SVG along the strip only.
+- **Hero:** image edge to edge from y = 0 behind a borderless header, h1 spanning the width over open
+  night sky, one line of copy (19 words), one button. No stat strip, no install box.
+- **Type:** Bricolage Grotesque 800 (display, wordmark, h2) and Instrument Sans 400 and 600 (body, labels,
+  buttons, the brew command with `tabular-nums`). Both OFL, Latin subset woff2, self-hosted. Sizes below
+  the hero: 2rem to 3.25rem (h2), 1.125rem (body, h3 in 600), 0.9375rem (captions, lists, notes, chart labels).
+- **Colour:** `--bg #0b1a24`, `--surface #12283a`, `--text #e6eef2`, `--muted #9db2bf`, `--accent #f0a63a`
+  (the one accent: button fill, focus ring, the battery dots and chord), `--dawn #dce6ec` with ink text
+  and `--dawn-muted #3f5664`. Amber is never text on dawn (1.62:1). No gradients in CSS; light lives in the images.
+- **Images:** four generated paintings (gouache style, shared style line), one per place; real captures stay real.
 
-## Signature object: the bag-trip strip
+## Signature object: the bag-trip chart
 
 One recorded trip (CHANGELOG.md 26–27, version 0.1.2): 75 minutes in a bag, battery 100% → 59%,
-macOS thermal level "nominal" throughout. Drawn as custom inline SVG, beside the four stop rules.
+macOS thermal level "nominal" throughout, redrawn in the night palette as inline SVG, drawn 1:1
+(700 or 300 units wide, 15px labels).
 
-Channels on the strip (x axis: minutes 0–75, ticks every 15):
-
-1. **Battery %** (pen red). Two recorded readings: 100% at 0 min, 59% at 75 min, as solid dots.
-   The straight line between them is dashed and labelled "Two readings. Nothing in between was
-   recorded." No curve is invented.
-2. **Stop rule slope** (graphite, thin): 20% an hour from 100% (100 → 75 at 75 min). The trip's
-   chord falls below it. Derived and labelled with its arithmetic: 41 points in 75 minutes is
-   32.8% an hour on average (100 − 59 = 41; 41 ÷ 1.25 h = 32.8).
-3. **Battery floor**: a rule at 10%.
-4. **Thermal level** (pen blue-grey): a flat band across all 75 minutes labelled "nominal".
-5. **Battery temperature scale** (separate short ruler beside the strip, 30–50 °C): ticks at 41 °C
-   hold and 44 °C pause (CHANGELOG.md 15–16, README.md 132–133), with the author's measured ranges
-   33–38 °C at a desk and 42–43.5 °C in a bag (README.md 138–139). Caption (revised in fix round 1):
-   the ruler marks the limits and the author's measured ranges and is not a reading from this trip.
-   The earlier wording ("0.1.2 used macOS's level only, which is why the limits came later") was
-   dropped because CHANGELOG.md 0.1.2 says that release already added battery readings.
-
-Caption names the build: "Version 0.1.2. One trip, recorded by the author. Source:
-CHANGELOG.md, lines 26–27."
-
-Static fallback: the SVG is fully drawn in the HTML, so JS off and reduced motion show the final
-strip. A readings table (start, end, thermal level) and the four rules as a list sit under it as
-the text version.
-
-**Signature motion (once):** when the strip first enters view, the dashed battery chord draws from
-100% to 59% over about 1.6 s, the 59% dot lands, then the "32.8% an hour" label appears. It does
-not loop. Reduced motion: nothing moves.
-
-**Micro-interactions (3):**
-1. Pointing at or focusing a stop rule in the list highlights its mark on the strip (and the mark
-   names the rule); works by tap on touch.
-2. Copy button on the Homebrew command: text changes to "Copied" with an `aria-live` note; the
-   command stays selectable without JS.
-3. The agent table's "Needs you" column marks read as text (yes / —), and the row under focus or
-   pointer gets the recorder's pen-red edge.
+- Two recorded readings as amber dots (100% at 0 min, 59% at 75 min). The line between them is dashed
+  and labelled "Two readings. Nothing in between was recorded." No curve is invented.
+- A thin line for 20% an hour from 100%; a rule at the 10% floor; a band for macOS thermal level "nominal" (recorded, claim 10) and, below it, a dashed outline "serious: the stop rule, not reached" (the rule from claim 14; "not reached" follows from nominal throughout, claim 10).
+- A separate battery temperature ruler (30–50 °C) with 41 °C hold, 44 °C pause and the author's ranges
+  33–38 °C (desk) and 42–43.5 °C (bag). The caption says it is not a reading from this trip.
+- Caption names version 0.1.2 and links CHANGELOG.md L26–L27 at the pinned commit.
+- Static fallback: fully drawn in the markup; readings table and the four stop rules as a list beside it.
+- Motion (once): the chord draws in 1.6 s when the chart first enters view, then the end labels appear.
+  Reduced motion: nothing moves. Choosing a stop rule (a radio group, "All marks" first) highlights its mark; the serious-state rule highlights its own dashed row, never the nominal band. Without JS the radios are hidden and the rules read as a plain list.
 
 ## Page order
 
-1. Skip link, small header: app icon (from `assets/brand/icon.png`), "Agent Awake".
-2. Hero: h1 "Your Mac stays awake while your agents work." Sub-line. Install block: the brew
-   command with copy, "Download 0.1.4 for Mac" to the latest release, "Signed with Developer ID
-   and notarised by Apple. macOS 13 or later, on Apple silicon or Intel." Real capture: `setup.png`.
-3. One trip in a bag: the strip, its caption, readings table, the four stop rules.
-4. What it does.
-5. Agents: the list from `Sources/AgentAwakeCore/AgentCatalog.swift` (cited), with each agent's
-   signal from README.md 71–90. No count printed. Real capture: `settings-agents.png`.
-6. Hooks stay out of the way (and the one time they wait).
-7. Pings.
-8. Lid closed, in a bag.
-9. Source: MIT, build from source.
-10. Status, as of the build date: latest release, CI on main, last push, licence. "No data" when
-    a value is missing.
-11. Footer: maintained date, deploy sha, repo link, hamardikan.com.
+1. Skip link, borderless header (icon, wordmark, links Agents, In a bag, Install, GitHub). Hero (image 1).
+2. Awake only while they work (claims 1, 3, 4).
+3. Works with the agents you use: agent list with signals, the real Settings capture, hooks (claims 5–9, 26–27).
+4. Sleep safeguards with the lid closed: claims 13–16, image 2 band, the chart, readings, four stop rules (claims 10–12, 14).
+5. Pings only when you are away: image 3 (claims 2, 17, 18).
+6. Install: download button, brew command with Copy, signing line, cask line, status (claims 19–25).
+7. Open source, MIT on dawn with image 4 (claim 23). Footer: date, sha, repo, hamardikan.com.
+
+## Image prompts (all with the shared style line)
+
+Style line: "Quiet painterly illustration, matte gouache texture, deep marine night blues with one small warm amber
+light, soft edges, no text, no logos, no visible screen UI, calm and still." Sources in `build/v2/agent-awake/art/`.
+
+| # | Subject | Ratio | Used for |
+|---|---|---|---|
+| 1 | Laptop open on a wooden desk by a tall window at night, amber-white glow, small city low in the window, top 55% empty sky | 16:9 | Hero (phone: 3:4 crop from the right) |
+| 2 | Closed laptop in a canvas messenger bag on a night train seat, streaks of light, one amber reading lamp | 3:2 | Bag band |
+| 3 | Phone face up on a bedside table, blank screen glowing blue-white, glass of water | 2:3, cropped to 4:5 | Pings. First try came out peach, so the prompt asks for a cool blue-white screen and no cream or pink tint |
+| 4 | Same desk at first light, closed laptop, mug, cool silver-blue sky, no amber (style line without the amber clause) | 16:9 | Closing band |
+
+The image tool offers no 4:5, so image 3 is generated 2:3 and cropped. Hero export widths are 1536 (the
+source width) and 1024; the tool does not make 2400.
+
+## Revisions after review round 1
+
+- M1: body prose is one size (1.125rem). 0.9375rem only for captions, citations, the cask and status lines, table cells and chart labels.
+- M2: stop rules are a native radio group, not toggle buttons.
+- M3: the serious thermal state has its own dashed mark; the nominal band is never highlighted.
+- M4: heading "Sleep safeguards with the lid closed". No unqualified safety claim.
+- S1: agents are grouped by signal set (start, finish and need you; start and finish), every name kept, no count.
+- S2: narrow chart labels the 100% start dot; the 20% an hour label has a line swatch in clear space.
+- S3: `verify.mjs` waits out the chart animation in desktop shots and writes `strip-desktop.png`, `strip-mobile.png` (reduced motion).
+- N1: "when the battery temperature exceeds 41 °C". N2: footer says "Built", not "Maintained".
+
+## Real vs missing
+
+- Real: `assets/img/agents-*.webp` (Settings, Agents) and the app icon. Generated images are illustration only.
+- Missing: a menu bar panel capture, a screen recording, a phone ping capture. Listed for Dika.
 
 ## Claims table
 
@@ -120,95 +117,3 @@ not loop. Reduced motion: nothing moves.
 
 Left off the page (unresolved, research §8–9): any agent count; the word "free"; competitor
 names; download or update-check counts; stars and forks (0).
-
-## Revisions after review
-
-- **Body face:** Source Serif 4 (400, 600), not Literata. It is the face this spec named, it is OFL,
-  and its Latin subset is about 20 KB a weight, which keeps the phone first load near 150 KB.
-  Literata was never in this build, so there was nothing to switch back from.
-- **The four rules** are the lid-closed ones from claim 14: battery 10%, a serious thermal state,
-  battery above 41 °C, drain faster than 20% an hour. The 44 °C pause is drawn on the ruler only,
-  because no claim explains it.
-- **Caption:** see the ruler paragraph above.
-- **Strip layout:** the phone chart has its own viewBox (300 wide) with labels at 15 px; the wide
-  chart appears from 720 px. Both carry the same numbers and marks.
-
-## Real vs missing
-
-- Real: `assets/screenshots/setup.png`, `assets/screenshots/settings-agents.png`, `assets/brand/icon.png`.
-- Missing: a capture of the menu bar panel (the app is not installed on this build Mac and the
-  GUI cannot be driven from here); a screen recording; a phone ping capture. Listed for Dika.
-
-## Checklist (PLAYBOOK §8)
-
-Evidence: harness `site/scripts/verify.mjs`, output in
-`~/workspace/sandbox/showcase-scan/build/agent-awake/shots/run6/report.md` (local) and
-`shots/live/report.md` (live URL). Review rounds: `review-round-*.md` in the same folder.
-
-Copy
-- [x] First line says what it is and for whom: h1 "Your Mac stays awake while your agents work."
-- [x] Meta and og description name the project in one line (`index.html` head).
-- [x] One role list and one contact order: n/a (no contact block; footer links repo and hamardikan.com).
-- [x] Denominators in the intro: n/a (no team or user numbers on the page).
-- [x] No ⚠️, [confirm], TBD, XX: harness text check PASS.
-- [x] Voice: read aloud; British spelling (notarised, licence, behaviour), no Oxford comma, no
-  exclamation marks, no marketing words, no "free", no agent count, no competitor names.
-- [x] Every claim row OK (claims table above; claims 9 and 16 corrected after review round 1).
-
-Claims and data
-- [x] Units and windows: 75 minutes, 100% → 59%, 32.8% an hour with its arithmetic, 41/44 °C with
-  the author's two-day log and the half-hour bag window.
-- [x] Live numbers dated: Status block and hero cask line carry the build date.
-- [x] No placeholders, no empty sections; missing captures are listed below, not framed in grey.
-
-Accessibility and phone
-- [x] Skip link first and works; one h1; `lang="en-GB"`: harness PASS.
-- [x] Contrast: lowest text pair 5.72:1 (dark, thermal band text), UI 4.10:1; axe zero violations
-  at 1440 and 375, light and dark.
-- [x] Zero console errors, zero failed or third-party requests: harness PASS.
-- [x] No horizontal scroll at 320, 375, 820, 1440: harness PASS (360 sits between 320 and 375).
-- [x] Touch copy: "Select a rule"; no hover-only reveal (rules are buttons, tap pins a rule).
-- [x] Things to press before the first scroll on a phone: Copy and Download.
-- [x] Reduced motion: no animations after load (harness); strip is static. No loop on the page.
-- [x] JS off: strip and readings table visible; Copy button stays hidden (harness).
-- [x] SVG labels render ≥14 px at 320 (harness computes font-size × scale).
-
-Visuals
-- [x] One signature object from a real artifact (CHANGELOG 0.1.2), static in markup.
-- [x] Banned list: no gradients (the only one is inside Apple's own setup window capture), no
-  cards, no pills, no fake terminal (the brew line is a plain code block with a Copy button), no
-  icon soup, no fade-ups.
-
-Privacy
-- [x] No IPs, hostnames other than public ones, account or zone IDs, secret or binding names in
-  page, source comments or images (grep of `dist/` and `wrangler.jsonc`).
-- [x] No "ADI", no CV link, no private split.
-
-Deploy
-- [x] Root-absolute URLs for internal links and assets.
-- [x] No `_redirects`; nothing shadows a page.
-- [x] CSP `default-src 'self'`, no inline script or style, `form-action 'none'`,
-  `frame-ancestors 'none'`, `base-uri 'none'`.
-- [x] `/assets/*` immutable, file names fingerprinted by `build.sh`.
-- [x] Hero does not move after load (image width/height set; strip height reserved).
-- [x] Live copy checked after deploy (see REPORT.md).
-
-## Self-critique
-
-*Would a design-literate engineer guess this was AI-generated? Why not?*
-
-Mostly not. The page has one idea and follows it: a recorder printout of a real trip, with the two
-readings drawn as dots and the missing middle drawn as a dashed chord that says it was not recorded.
-Generated pages invent a smooth curve there; this one refuses to. The type is a reading serif with a
-mono scale, on paper, with one pen red and one pen blue; there are no cards, chips, glows or stock
-icons, and the only images are the app's own windows.
-
-What still smelled, and what was done:
-- The first build crowded labels on the chart and let the brew command break at a hyphen; both fixed.
-- "Hooks never block an agent" repeated the README's line, which the code contradicts (the heat
-  gate waits up to ten minutes); rewritten as "Hooks stay out of the way" with the wait stated.
-- Bare file-name citations read like an internal report; they now link to the pinned lines.
-- Still there: the "ch n" section labels, which a reviewer called repetitive. Kept, because they are
-  the recorder-roll edge the concept rests on, set small and hidden from screen readers.
-- Still there: the hero capture is Apple's setup window, which has a blue gradient of its own. It is
-  a real capture, so it stays; a menu bar capture would be better (open question for Dika).
