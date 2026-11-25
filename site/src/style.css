@@ -56,7 +56,7 @@ h1{margin:0;font:800 clamp(3.5rem,7.5vw,8rem)/.95 var(--display);letter-spacing:
 @media (max-width:700px){.hero-pic img{object-position:50% 50%}.hero-in{padding-top:104px}}
 
 /* sections */
-.sec{padding-block:clamp(64px,10vw,128px)}
+.sec{padding-block:clamp(56px,7vw,96px)}
 .bg{background:var(--bg)}.surface{background:var(--surface)}
 h2{margin:0;font:800 var(--text-heading)/1.02 var(--display);letter-spacing:-.03em;text-wrap:balance}
 h3{margin:0 0 8px;font:600 var(--text-body)/1.4 var(--sans)}
@@ -75,13 +75,15 @@ h3{margin:0 0 8px;font:600 var(--text-body)/1.4 var(--sans)}
 .agent-list li{break-inside:avoid;padding:10px 0;border-top:1px solid var(--rule);font-weight:600;line-height:1.35}
 .shot img{width:100%;max-width:560px;border-radius:8px}
 .cap{margin-top:12px;font-size:var(--text-sm);color:var(--muted);max-width:70ch}
-.hooks{margin-top:72px}
+.hooks{margin-top:56px}
+.install-col h2{margin-bottom:28px}
 
 /* bag */
 .band{margin:0;overflow:hidden}
 .band img{width:100%;height:clamp(300px,46vw,640px);object-fit:cover}
 .bag-band{margin-block:clamp(48px,7vw,96px)}
-.bag-band img{object-position:50% 62%}
+.bag-band img{height:auto;aspect-ratio:21/9;min-height:340px;max-height:720px;object-position:50% 87%}
+@media (max-width:700px){.bag-band img{object-position:60% 70%}}
 .trip{display:grid;gap:40px}
 @media (min-width:1100px){.strip{display:grid;grid-template-columns:minmax(0,760px) minmax(0,1fr);column-gap:64px;align-items:start}}
 .strip-fig{max-width:760px}
