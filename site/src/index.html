@@ -51,7 +51,7 @@
       <p class="live" id="copy-note" role="status" aria-live="polite"></p>
       <p class="or">Or download the disk image:</p>
       <p><a class="btn" href="https://github.com/hmrdkn-labs/agent-awake/releases/latest">{{DOWNLOAD_LABEL}}</a></p>
-      <p class="fine">Signed and notarised by Apple. macOS 13 or later, on Apple silicon or Intel. It updates itself; Settings → General turns that off.</p>
+      <p class="fine">Signed with Developer ID and notarised by Apple. macOS 13 or later, on Apple silicon or Intel. It updates itself; Settings → General turns that off.</p>
       <p class="fine">{{CASK_LINE}}</p>
     </div>
   </div>
@@ -301,7 +301,7 @@
   <div class="sec-grid">
     <h2 id="h-hooks">Hooks stay out of the way</h2>
     <div class="sec-body prose">
-      <p>The hooks only report to the app and return at once. They never approve or deny a tool. If the app is not running, they do nothing.</p>
+      <p>The hooks report to the app without approving or denying tools. They normally return at once. If the app is not running, they do nothing.</p>
       <p>The one time they wait is when the Mac is hot or almost out of memory. The agent pauses before its next tool call, up to ten minutes per call, then goes on. Antigravity, Cursor, Windsurf and Amp have no hook that can wait, so they are not held; the builds they started are still slowed and paused.</p>
     </div>
   </div>

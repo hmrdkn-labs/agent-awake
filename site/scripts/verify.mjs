@@ -145,6 +145,8 @@ const measure = () => {
 };
 
 const focusInfo = () => {
+  const ids = (window.__kbIds ||= new WeakMap());
+  const kbKey = (el) => { if (!ids.has(el)) ids.set(el, (window.__kbN = (window.__kbN || 0) + 1)); return 'el' + ids.get(el); };
   const el = document.activeElement;
   if (!el || el === document.body || el === document.documentElement) return null;
   const cs = getComputedStyle(el);
@@ -167,7 +169,7 @@ const focusInfo = () => {
     outline: outline ? `${cs.outlineWidth} ${cs.outlineStyle} ${cs.outlineColor}` : null,
     boxShadow: shadow ? cs.boxShadow : null,
     visibleIndicator: !!(outline || shadow),
-    key: el.tagName + '|' + (el.id || '') + '|' + (el.getAttribute('href') || '') + '|' + Math.round(r.x) + ',' + Math.round(r.y),
+    key: kbKey(el), // DOM identity, not position: scrolling can put different controls at the same viewport spot
   };
 };
 
@@ -255,16 +257,19 @@ async function keyboard(browser) {
     const page = await loadPage(ctx);
     await page.evaluate(() => document.fonts.ready);
     const log = [];
-    const seen = new Set();
-    for (let i = 0; i < 40; i++) {
+    let firstKey = null;
+    const MAX_TABS = 60;
+    let wrapped = false;
+    for (let i = 0; i < MAX_TABS; i++) {
       await page.keyboard.press('Tab');
       const info = await page.evaluate(focusInfo);
-      if (!info) { log.push({ step: i + 1, tag: 'body', note: 'focus left the document' }); break; }
-      if (seen.has(info.key)) break;
-      seen.add(info.key);
+      if (!info) { log.push({ step: i + 1, tag: 'body', note: 'focus left the document' }); continue; }
+      if (firstKey === null) firstKey = info.key;
+      else if (info.key === firstKey) { wrapped = true; break; }
       log.push({ step: i + 1, ...info });
       if (i < 3) await page.screenshot({ path: join(OUT, `focus-${i + 1}.png`) });
     }
+    extra.keyboardWrapped = wrapped;
     extra.keyboard = log;
     const first = log[0];
     let skipOk = false;
@@ -274,6 +279,7 @@ async function keyboard(browser) {
       skipOk = exists;
       skipDetail = `${first.href} -> ${exists ? 'target exists' : 'MISSING target'} (text "${first.text}")`;
     } else if (first) skipDetail = `first focus is <${first.tag}> "${first.text}" href=${first.href}`;
+    record('keyboard pass returned to the first element within 60 Tabs', wrapped, `${log.filter((l) => l.tag !== 'body').length} stops`);
     record('first Tab lands on skip link with existing target', skipOk, skipDetail);
     const bad = log.filter((l) => l.tag !== 'body' && !l.visibleIndicator);
     record('every focused element has a visible focus indicator (outline/box-shadow)', bad.length === 0 && log.length > 0,
@@ -494,7 +500,7 @@ function writeReports() {
   }
   if (extra.transfer) L.push('', '## Transfer @375', '', `Total ${extra.transfer.kb} KB`, ...extra.transfer.files.map((f) => `- ${f[0]} ${(f[1] / 1024).toFixed(1)} KB`));
   if (extra.keyboard) {
-    L.push('', '## Keyboard pass', '', '| # | element | name | box | indicator |', '|---|---|---|---|---|');
+    L.push('', `## Keyboard pass (${extra.keyboard.filter((k) => k.tag !== 'body').length} stops; returned to the first element: ${extra.keyboardWrapped})`, '', '| # | element | name | box | indicator |', '|---|---|---|---|---|');
     for (const k of extra.keyboard) L.push(`| ${k.step} | <${k.tag}> ${String(k.text || '').replace(/\|/g, '/')} | ${String(k.name || '').replace(/\|/g, '/')} | ${k.box ? `${k.box.x},${k.box.y} ${k.box.w}x${k.box.h}` : ''} | ${k.visibleIndicator ? (k.outline || k.boxShadow) : 'NONE'} |`);
   }
   L.push('', `Demo focused strip stops: ${extra.demoFocusedStrip ?? 'n/a'}`);
