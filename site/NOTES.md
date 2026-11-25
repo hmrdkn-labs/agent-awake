@@ -117,3 +117,7 @@ source width) and 1024; the tool does not make 2400.
 
 Left off the page (unresolved, research §8–9): any agent count; the word "free"; competitor
 names; download or update-check counts; stars and forks (0).
+
+## Search (v3)
+
+Title, description, og/twitter text and the agents h2 now carry the query "keep Mac awake while AI agents work" and the named agents (SEO.md in the build folder has the research). JSON-LD `WebSite` + `SoftwareApplication` + `Person` in the head; `softwareVersion` comes from the release at build time and the line is dropped when none was read. The og image is `og.jpg` (87 KB). `sitemap.xml` is written by the build; `robots.txt` points to it; an IndexNow key file sits at the root (not submitted yet). Footer links the four sibling pages. CSP `connect-src` is `'self'` so Lighthouse can fetch robots.txt. No new product claims; not rich-result eligible (no ratings or offers, none invented).

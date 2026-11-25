@@ -607,7 +607,9 @@ async function lighthouse() {
       .filter((a) => a.score !== null && a.score < 1 && !['informative', 'notApplicable', 'manual'].includes(a.scoreDisplayMode))
       .map((a) => `${a.id}=${a.score}`);
     record('9 lighthouse mobile accessibility = 100', sc.accessibility === 100, `${sc.accessibility}`);
-    record('9 lighthouse mobile performance >= 90', sc.performance >= 90, `${sc.performance}`);
+    record('9 lighthouse mobile performance >= 95', sc.performance >= 95, `${sc.performance}`);
+    record('9 lighthouse mobile best-practices = 100', sc['best-practices'] === 100, `${sc['best-practices']}`);
+    record('9 lighthouse mobile seo = 100', sc.seo === 100, `${sc.seo}`);
   } catch (e) {
     record('9 lighthouse mobile', false, e.stack || e.message);
   } finally {

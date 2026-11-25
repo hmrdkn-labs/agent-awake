@@ -3,22 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agent Awake: keeps your Mac awake while your agents work</title>
-<meta name="description" content="Agent Awake is a Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
+<title>Keep your Mac awake while AI agents work · Agent Awake</title>
+<meta name="description" content="Open-source menu bar app that keeps your Mac awake only while Claude Code, Codex, Cursor and other AI agents work, then lets it sleep and pings your phone.">
 <link rel="canonical" href="https://agentawake.hamardikan.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Agent Awake">
-<meta property="og:title" content="Agent Awake: keeps your Mac awake while your agents work">
-<meta property="og:description" content="A Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
+<meta property="og:title" content="Keep your Mac awake while AI agents work · Agent Awake">
+<meta property="og:description" content="Open-source menu bar app that keeps your Mac awake only while Claude Code, Codex, Cursor and other AI agents work, then lets it sleep and pings your phone.">
 <meta property="og:url" content="https://agentawake.hamardikan.com/">
-<meta property="og:image" content="https://agentawake.hamardikan.com/og.png">
+<meta property="og:image" content="https://agentawake.hamardikan.com/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="A laptop open on a desk by a tall window at night, its screen glowing amber, a small city in the window.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Agent Awake: keeps your Mac awake while your agents work">
-<meta name="twitter:description" content="A Mac menu bar app that keeps the Mac awake only while AI coding agents work, then lets it sleep and pings your phone.">
-<meta name="twitter:image" content="https://agentawake.hamardikan.com/og.png">
+<meta name="twitter:title" content="Keep your Mac awake while AI agents work · Agent Awake">
+<meta name="twitter:description" content="Open-source menu bar app that keeps your Mac awake only while Claude Code, Codex, Cursor and other AI agents work, then lets it sleep and pings your phone.">
+<meta name="twitter:image" content="https://agentawake.hamardikan.com/og.jpg">
 <meta name="theme-color" content="#0b1a24">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -26,6 +27,43 @@
 <link rel="preload" href="/assets/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://agentawake.hamardikan.com/#website",
+      "name": "Agent Awake",
+      "url": "https://agentawake.hamardikan.com/",
+      "inLanguage": "en-GB",
+      "publisher": { "@id": "https://hamardikan.com/#person" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://agentawake.hamardikan.com/#app",
+      "name": "Agent Awake",
+      "description": "Open-source menu bar app that keeps your Mac awake only while Claude Code, Codex, Cursor and other AI agents work, then lets it sleep and pings your phone.",
+      "url": "https://agentawake.hamardikan.com/",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS 13 or later",
+      "softwareVersion": "{{VERSION}}",
+      "downloadUrl": "https://github.com/hmrdkn-labs/agent-awake/releases/latest",
+      "license": "https://opensource.org/licenses/MIT",
+      "image": "https://agentawake.hamardikan.com/og.jpg",
+      "sameAs": ["https://github.com/hmrdkn-labs/agent-awake"],
+      "author": { "@id": "https://hamardikan.com/#person" },
+      "publisher": { "@id": "https://hamardikan.com/#person" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://hamardikan.com/#person",
+      "name": "Azzam Muhammadi Rizqun Karima",
+      "url": "https://hamardikan.com/"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a>
@@ -67,7 +105,7 @@
 
 <section class="sec surface" id="agents" aria-labelledby="h-agents">
   <div class="wrap">
-    <h2 id="h-agents">Works with the agents you use</h2>
+    <h2 id="h-agents">Works with Claude Code, Codex, Cursor and more</h2>
     <div class="agents-grid">
       <div>
         <p class="prose">Connect each one once in Settings. Connecting adds the hooks next to yours and keeps a backup. Disconnect removes exactly what it added.</p>
@@ -361,6 +399,7 @@
 <footer class="foot dawn">
   <div class="wrap foot-in">
     <p>Built {{BUILD_DATE}}. Deploy <code>{{SHA}}</code>.</p>
+    <p>More from hmrdkn-labs: <a href="https://whiteboard.hamardikan.com/">Whiteboard</a>, <a href="https://lazyss.hamardikan.com/">lazyss</a>, <a href="https://kubecompass.hamardikan.com/">KubeCompass</a>, <a href="https://open-pajak.hamardikan.com/">Open Pajak</a></p>
     <p><a href="https://github.com/hmrdkn-labs/agent-awake">Repository</a> · <a href="https://hamardikan.com/">hamardikan.com</a></p>
   </div>
 </footer>

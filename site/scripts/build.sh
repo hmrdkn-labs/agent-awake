@@ -4,7 +4,7 @@
 #   2. fails when the cask version differs from the release tag, because the page prints both;
 #   3. fingerprints everything under assets/ plus style.css and page.js (name.<8 hex>.ext) and rewrites the references;
 #   4. fills the {{PLACEHOLDERS}} in index.html with the snapshot, the build date (UTC) and the short git sha;
-#   5. writes dist/deploy.json { at, sha }.
+#   5. writes dist/sitemap.xml (lastmod = build date) and dist/deploy.json { at, sha }; drops the JSON-LD softwareVersion line when no release was read.
 # A value that could not be read renders as "No data", never a guess. dist/ is built in a temp directory and moved into place.
 set -euo pipefail
 # bash 5.2 makes "&" special in ${var//pat/repl}; the values below may contain it
@@ -77,7 +77,8 @@ CI_URL="${ci_url:-https://github.com/$REPO/actions}"
 CI_DATE="$(fmt_date "$ci_at")"
 PUSHED_DATE="$(fmt_date "$pushed")"
 LICENCE="${licence:-$NODATA}"
-PLACEHOLDERS="DOWNLOAD_LABEL CASK_LINE RELEASE_TAG RELEASE_URL RELEASE_DATE CI_RESULT CI_URL CI_DATE PUSHED_DATE LICENCE BUILD_DATE SHA"
+VERSION="$ver"
+PLACEHOLDERS="VERSION DOWNLOAD_LABEL CASK_LINE RELEASE_TAG RELEASE_URL RELEASE_DATE CI_RESULT CI_URL CI_DATE PUSHED_DATE LICENCE BUILD_DATE SHA"
 for k in $PLACEHOLDERS; do
   printf -v "$k" '%s' "$(esc "${!k}")"
 done
@@ -121,6 +122,8 @@ done
 # 4. pages
 for page in index.html 404.html; do
   html="$(rewrite "$SRC/$page")"
+  # no release read: drop the property rather than print a placeholder value
+  if [ -z "$ver" ]; then html="$(printf '%s\n' "$html" | grep -v '{{VERSION}}')"; fi
   for k in $PLACEHOLDERS; do
     html="${html//"{{$k}}"/${!k}}"
   done
@@ -131,9 +134,20 @@ if grep -rn '{{' "$OUT" --include='*.html'; then
   exit 1
 fi
 
-for f in favicon.svg apple-touch-icon.png og.png robots.txt _headers; do
+for f in favicon.svg apple-touch-icon.png og.jpg robots.txt _headers 4c63f6d890fca882aa5e968061c49ffc.txt; do
   cp "$SRC/$f" "$OUT/$f"
 done
+
+# sitemap: the one indexable page, lastmod = build date (UTC)
+cat > "$OUT/sitemap.xml" << XML
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://agentawake.hamardikan.com/</loc>
+    <lastmod>$(date -u +%Y-%m-%d)</lastmod>
+  </url>
+</urlset>
+XML
 
 # 5. deploy.json
 jq -n --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg sha "$SHA" '{at: $at, sha: $sha}' > "$OUT/deploy.json"
