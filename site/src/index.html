@@ -65,7 +65,7 @@
   <div class="sec-grid">
     <h2 id="h-trip">One trip in a bag</h2>
     <div class="sec-body">
-      <p class="prose">Version 0.1.2, 75 minutes in a bag. The battery went from 100% to 59%. macOS’s own heat level stayed nominal the whole time, so the app now reads the battery too.</p>
+      <p class="prose">Version 0.1.2, 75&nbsp;minutes in a bag. The battery went from 100% to 59%. macOS’s own heat level stayed nominal the whole time, so the app now reads the battery too.</p>
 
       <div class="strip" id="strip">
         <figure class="strip-fig">
@@ -178,10 +178,9 @@
             </g>
             <g data-mark="drain">
               <line class="mk ink" x1="54" y1="40" x2="286" y2="90"/>
-              <text class="t lb" x="286" y="44" text-anchor="end">20% an hour from 100%</text>
+              <text class="t lb" x="286" y="42" text-anchor="end">20% an hour from 100%</text>
             </g>
 
-            <line class="leader" x1="62" y1="47" x2="62" y2="164"/>
             <text class="t" x="62" y="178">Two readings. Nothing in</text>
             <text class="t" x="62" y="196">between was recorded.</text>
             <path class="chord red" d="M54 40 L286 122" mask="url(#mn)"/>
@@ -215,7 +214,7 @@
               <text class="t" x="187" y="473" text-anchor="end">bag 42–43.5 °C</text>
             </g>
           </svg>
-          <figcaption class="cap">Version 0.1.2. One trip, recorded by the author. Source: <code>CHANGELOG.md</code>, lines 26–27. The ruler marks the limits and the author’s measured ranges. It is not a reading from this trip.</figcaption>
+          <figcaption class="cap">Version 0.1.2. One trip, recorded by the author. Source: <a href="https://github.com/hmrdkn-labs/agent-awake/blob/5df817d34c8b21b3b2fa51d54ec374c6bf40c268/CHANGELOG.md#L26-L27">CHANGELOG.md, lines 26–27</a>. The ruler marks the limits and the author’s measured ranges (42–43.5&nbsp;°C after half an hour working in a bag). It is not a reading from this trip.</figcaption>
         </figure>
 
         <div class="strip-text">
@@ -227,15 +226,15 @@
               <tr><th scope="row">End</th><td>75</td><td>59%</td><td>nominal</td></tr>
             </tbody>
           </table>
-          <p class="prose small">100 − 59 = 41 points in 75 minutes. 41 ÷ 1.25 h = 32.8% an hour on average.</p>
+          <p class="prose small">100% − 59% = 41% of the battery in 75&nbsp;minutes. 41 ÷ 1.25&nbsp;h = 32.8% an hour on average.</p>
 
           <h3 id="h-rules">Four stop rules</h3>
-          <p class="prose small">Lid-closed mode gives sleep back to macOS when any of these holds. Point at one to see its mark on the strip.</p>
+          <p class="prose small">Lid-closed mode gives sleep back to macOS when any of these holds. Select a rule to see its mark on the strip.</p>
           <ul class="rules" aria-labelledby="h-rules">
             <li><button type="button" data-rule="floor" aria-pressed="false">The battery reaches 10%.</button></li>
             <li><button type="button" data-rule="thermal" aria-pressed="false">macOS reports a serious thermal state.</button></li>
-            <li><button type="button" data-rule="heat" aria-pressed="false">The battery passes 41 °C.</button></li>
-            <li><button type="button" data-rule="drain" aria-pressed="false">The battery drains faster than 20% an hour. This trip averaged 32.8%.</button></li>
+            <li><button type="button" data-rule="heat" aria-pressed="false">The battery passes 41&nbsp;°C.</button></li>
+            <li><button type="button" data-rule="drain" aria-pressed="false">The battery drains faster than 20% an hour. This trip averaged 32.8% an hour.</button></li>
           </ul>
         </div>
       </div>
@@ -288,7 +287,7 @@
           <tr><th scope="row">pi</th><td>yes</td><td>yes</td></tr>
         </tbody>
       </table>
-      <p class="prose small">Without any setup it also notices herdr panes, and oh-my-pi, Codex and Zed turns. Names: <code>Sources/AgentAwakeCore/AgentCatalog.swift</code>. Signals: the agent table in <code>README.md</code>, lines 71–90.</p>
+      <p class="prose small">Without any setup it also notices herdr panes, and oh-my-pi, Codex and Zed turns. Names: <a href="https://github.com/hmrdkn-labs/agent-awake/blob/5df817d34c8b21b3b2fa51d54ec374c6bf40c268/Sources/AgentAwakeCore/AgentCatalog.swift#L48-L107">AgentCatalog.swift, lines 48–107</a>. Signals: <a href="https://github.com/hmrdkn-labs/agent-awake/blob/5df817d34c8b21b3b2fa51d54ec374c6bf40c268/README.md#L71-L90">README.md, lines 71–90</a>.</p>
       <figure class="shot">
         <img src="/assets/img/agents-560.webp" srcset="/assets/img/agents-560.webp 560w, /assets/img/agents-1120.webp 1120w" sizes="(min-width: 960px) 560px, calc(100vw - 48px)" width="560" height="514" loading="lazy" alt="Agent Awake Settings, Agents tab. Claude Code and Antigravity show Connected. Codex shows One more step. Qwen Code, oh-my-pi and pi show Connect. Under Detected without setup, herdr panes show Automatic.">
         <figcaption class="cap">Settings → Agents.</figcaption>
@@ -300,9 +299,10 @@
 <section class="sec wrap" id="hooks" aria-labelledby="h-hooks">
   <p class="chan" aria-hidden="true">ch 4 · hooks</p>
   <div class="sec-grid">
-    <h2 id="h-hooks">Hooks never block an agent</h2>
+    <h2 id="h-hooks">Hooks stay out of the way</h2>
     <div class="sec-body prose">
-      <p>The hooks print nothing and exit at once. If the app is not running, they do nothing.</p>
+      <p>The hooks only report to the app and return at once. They never approve or deny a tool. If the app is not running, they do nothing.</p>
+      <p>The one time they wait is when the Mac is hot or almost out of memory. The agent pauses before its next tool call, up to ten minutes per call, then goes on. Antigravity, Cursor, Windsurf and Amp have no hook that can wait, so they are not held; the builds they started are still slowed and paused.</p>
     </div>
   </div>
 </section>
@@ -324,8 +324,8 @@
     <h2 id="h-lid">Lid closed, in a bag</h2>
     <div class="sec-body prose">
       <p>Lid-closed mode is off by default. You approve its helper once, in System Settings → Login Items.</p>
-      <p>It gives sleep back to macOS at 10% battery, when the thermal state is serious, above battery 41 °C, or on drain faster than 20% an hour. If the lid is closed when it gives up, the Mac sleeps, and lid-closed mode stays off until the lid opens.</p>
-      <p>The 41 °C limit comes from two days of the author’s log on a MacBook Pro M4 Pro: 33–38 °C at a desk, 42–43.5 °C in a bag.</p>
+      <p>It gives sleep back to macOS at 10% battery, when the thermal state is serious, above battery 41&nbsp;°C, or on drain faster than 20% an hour. If the lid is closed when it gives up and macOS would normally sleep (no external display in use), the Mac sleeps. Lid-closed mode then stays off until the lid opens.</p>
+      <p>The 41&nbsp;°C limit comes from two days of the author’s log on a MacBook Pro M4 Pro: 33–38&nbsp;°C at a desk, 42–43.5&nbsp;°C after half an hour working in a bag.</p>
     </div>
   </div>
 </section>

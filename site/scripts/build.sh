@@ -23,7 +23,7 @@ done
 esc() { jq -rn --arg s "$1" '$s | @html'; }
 fmt_date() {
   if [ -z "$1" ]; then echo "$NODATA"; return; fi
-  jq -rn --arg t "$1" '$t | fromdateiso8601 | strftime("%-d %b %Y")' 2> /dev/null || echo "$NODATA"
+  jq -rn --arg t "$1" '$t | fromdateiso8601 | strftime("%-d\u00a0%b\u00a0%Y")' 2> /dev/null || echo "$NODATA"
 }
 field() { printf '%s' "$1" | jq -r "$2 // empty" 2> /dev/null || true; }
 
@@ -59,7 +59,7 @@ case "$ci_result" in
   *) ci_label="$ci_result" ;;
 esac
 
-BUILD_DATE="$(jq -n 'now | strftime("%-d %b %Y")')"
+BUILD_DATE="$(jq -n 'now | strftime("%-d\u00a0%b\u00a0%Y")')"
 BUILD_DATE="${BUILD_DATE//\"/}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2> /dev/null || echo "$NODATA")"
 

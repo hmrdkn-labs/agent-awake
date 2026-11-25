@@ -110,9 +110,11 @@ const measure = () => {
     if (r.width <= 1 || r.height <= 1) continue;
     seen.add(el);
     let px = parseFloat(getComputedStyle(el).fontSize);
-    if (el instanceof SVGElement && el.getScreenCTM) {
-      const m = el.getScreenCTM();
-      if (m) px *= Math.hypot(m.a, m.b);
+    if (el instanceof SVGElement && el.ownerSVGElement) {
+      // rendered size = font-size x (drawn width / viewBox width)
+      const svg = el.ownerSVGElement;
+      const vb = svg.viewBox.baseVal;
+      if (vb && vb.width) px *= svg.getBoundingClientRect().width / vb.width;
     }
     out.fonts.push({ px: +px.toFixed(2), tag: el.tagName.toLowerCase(), text: n.nodeValue.trim().slice(0, 40) });
   }
@@ -320,7 +322,7 @@ async function axeAndChecks(browser) {
       await page.evaluate(() => document.fonts.ready);
       const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, bw: document.body.scrollWidth, iw: window.innerWidth }));
       record(`no horizontal scroll @${w}`, Math.max(o.sw, o.bw) <= o.iw, `scrollWidth ${o.sw}/${o.bw} vs innerWidth ${o.iw}`);
-      if (size === 'm' || size === 'd') {
+      if (size === 's' || size === 'm' || size === 'd') {
         const m = await page.evaluate(measure);
         extra[`measure-${w}`] = { minFont: m.minFont, smallest5: m.fonts.slice(0, 5), paragraphs: m.paragraphs, targets: m.targets };
         record(`min font-size >=14px @${w}`, m.minFont && m.minFont.px >= 14,

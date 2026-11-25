@@ -100,6 +100,8 @@ h3{font:600 20px/1.3 var(--serif);margin-top:40px}
 .leader{stroke:var(--muted);stroke-width:1}
 .t{font:400 15px/1 var(--mono);fill:var(--ink);paint-order:stroke;stroke:var(--strip);stroke-width:3px;stroke-linejoin:round}
 .t.nohalo{stroke:none}
+/* the narrow chart is drawn 300 units wide and shown 272 px wide at 320 px: 15.6 units renders at 14.1 px */
+.chart-narrow .t{font-size:15.6px}
 .t.mute{fill:var(--muted)}
 .t.red{fill:var(--red)}
 .t.blue{fill:var(--blue)}

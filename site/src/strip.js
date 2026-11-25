@@ -35,6 +35,18 @@
     if (!entries.some(function (e) { return e.isIntersecting; })) return;
     io.disconnect();
     strip.classList.add('play');
+    // Once the last label has landed, drop both classes: the strip goes back to its plain final markup,
+    // so a later restyle (a resize, a full-page capture) cannot restart the forwards-filled animations.
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      strip.classList.remove('anim', 'play');
+    }
+    strip.addEventListener('animationend', function (e) {
+      if (e.target.classList && e.target.classList.contains('final')) finish();
+    });
+    setTimeout(finish, 3000);
   }, { threshold: 0.5 });
   io.observe(fig);
 })();
