@@ -176,9 +176,11 @@ html:not(.js) .rules input,html:not(.js) .rules .all{display:none}
 .dawn a{color:var(--dawn-text)}
 .dawn .sec{padding-block:clamp(48px,7vw,96px)}
 .foot{padding-block:0 40px;font-size:var(--text-sm)}
-.foot-in{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 24px;padding-top:24px;border-top:1px solid #b9c7d0;color:var(--dawn-muted)}
+.foot-in{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:4px 24px;padding-top:24px;border-top:1px solid #b9c7d0;color:var(--dawn-muted)}
 .foot a{display:inline-block;min-height:44px;color:var(--dawn-text)}
 .foot p{line-height:44px}
+.foot .foot-more{line-height:1.6}
+.foot .foot-more a{display:inline;min-height:0}
 .foot code{font-weight:600}
 
 /* 404 */
