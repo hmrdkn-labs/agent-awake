@@ -2,9 +2,6 @@
 
 <h1 align="center">Agent Awake</h1>
 
-<p align="center"><b>caffeinate for AI agents.</b> Your Mac stays awake while agents work,<br>
-sleeps the moment they're done, and your phone tells you.</p>
-
 <p align="center">
   <a href="https://github.com/hmrdkn-labs/agent-awake/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/hmrdkn-labs/agent-awake"></a>
   <a href="https://github.com/hmrdkn-labs/agent-awake/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hmrdkn-labs/agent-awake/actions/workflows/ci.yml/badge.svg"></a>
@@ -12,10 +9,21 @@ sleeps the moment they're done, and your phone tells you.</p>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
-<p align="center"><a href="https://github.com/hmrdkn-labs/agent-awake/releases/latest"><b>Download for Mac</b></a></p>
+<p align="center"><b>caffeinate for AI agents.</b> A macOS menu bar app. Agents tell it when they start, finish and need you, through their own hooks.<br>
+The Mac stays awake only while they work, then sleeps, and your phone is pinged when you're away.</p>
+
+<p align="center"><a href="https://github.com/hmrdkn-labs/agent-awake/releases/latest"><b>Download for Mac</b></a> · <a href="https://agentawake.hamardikan.com/">Website</a></p>
+
+```sh
+brew install --cask hmrdkn-labs/tap/agent-awake
+```
+
+<p align="center">Signed with Developer ID and notarized by Apple · macOS 13 or later</p>
 
 <p align="center"><img src="assets/screenshots/setup.png" width="420" alt="Agent Awake setup window">
 <img src="assets/screenshots/settings-agents.png" width="440" alt="Agents settings: Claude Code connected, Codex waiting for one step, more agents ready to connect"></p>
+
+<!-- demo: assets/screenshots/demo.gif, see docs/launch/captures.md -->
 
 ---
 
@@ -47,11 +55,7 @@ sleeps mid-task and one that burns battery all night with `caffeinate`. Agent Aw
 ## Install
 
 Download the DMG from the [latest release](https://github.com/hmrdkn-labs/agent-awake/releases/latest),
-drag **Agent Awake** to Applications and open it. Or with Homebrew:
-
-```sh
-brew install --cask hmrdkn-labs/tap/agent-awake
-```
+drag **Agent Awake** to Applications and open it.
 
 It's signed with Developer ID and notarized by Apple. Requires macOS 13 or later, on Apple silicon or Intel.
 
@@ -168,6 +172,8 @@ small helper does exactly that:
   display in use), the helper sleeps the Mac (`pmset sleepnow`, its only other command). Lid-closed mode
   then stays off until you open the lid, so a Mac that cooled down in a bag doesn't start working again.
 - Heat is the real risk in a closed bag. Prefer AC power.
+
+For what the root helper can and cannot do, see [SECURITY.md](SECURITY.md).
 
 ## How it works
 
