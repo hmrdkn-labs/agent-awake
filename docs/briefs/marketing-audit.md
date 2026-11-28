@@ -170,3 +170,14 @@ Each: what / where / why / evidence / effort / owner.
 - `brew install` on a clean machine: not run (read-only brief).
 
 ## Report
+
+Commit: `3919834eca` (full `3919834ecae4672ecea3b99c08b8b46c38c4b342`) on `marketing-audit`. This section is the only change in the next commit.
+
+Top 5, ranked:
+1. Hero one-line install and trust line under the button (`site/src/index.html` 86-93). S, deploy.
+2. Record the real menu bar panel, a phone ping and a screen recording (owner). M.
+3. Say "menu bar app" in the visible copy (site line 90, README line 22). S.
+4. Label the four paintings as illustrations (site lines 87, 163, 350, 387). S.
+5. Drop the agent count from the GitHub description and set a social preview (owner). S.
+
+Could not read or partial: Amphetamine screenshots and reviews; Let It Brew compare pages and FAQ; Afterhours, Barista and Insomnia beyond the README top; Raycast listing beyond the search snippet; site not rendered in a browser; live CI value; clean-machine install (not run, read-only brief).
