@@ -73,8 +73,8 @@ open the app again to bring the window back.
 
 Connect them in **Settings → Agents**, or with `agentawake connect <id>`. Connecting adds Agent Awake's
 hooks next to yours (a backup of the file is kept), and Disconnect removes exactly what it added.
-Hooks never block an agent: they print nothing, exit 0 in milliseconds, and do nothing if the app isn't
-running.
+Hooks never decide for an agent and always exit 0; most print nothing, and they do nothing if the app isn't
+running. While the Mac is hot or low on memory, a tool-call hook waits (up to 10 minutes) before the tool runs.
 
 | Agent | id | Start / done | Needs you | Where |
 |---|---|---|---|---|
