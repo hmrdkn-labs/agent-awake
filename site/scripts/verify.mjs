@@ -588,7 +588,7 @@ async function lighthouse() {
   const port = await freePort();
   const proc = spawn(chromePath, [
     `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--headless=new', '--no-first-run',
-    '--no-default-browser-check', '--disable-gpu', 'about:blank',
+    '--no-default-browser-check', '--use-mock-keychain', '--password-store=basic', '--disable-gpu', 'about:blank',
   ], { stdio: 'ignore' });
   try {
     for (let i = 0; i < 50; i++) {

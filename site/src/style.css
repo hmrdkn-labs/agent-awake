@@ -48,8 +48,10 @@ h1{margin:0;font:800 clamp(3.5rem,7.5vw,8rem)/.95 var(--display);letter-spacing:
 .w:nth-child(2){animation-delay:60ms}.w:nth-child(3){animation-delay:120ms}.w:nth-child(4){animation-delay:180ms}
 .w:nth-child(5){animation-delay:240ms}.w:nth-child(6){animation-delay:300ms}.w:nth-child(7){animation-delay:360ms}.w:nth-child(8){animation-delay:420ms}
 @keyframes rise{from{opacity:0;transform:translateY(.35em)}}
-.lede{max-width:34ch;margin-top:clamp(20px,3vh,32px);color:var(--text)}
-.hero-in p:last-child{margin-top:24px}
+.lede{max-width:46ch;margin-top:clamp(20px,3vh,32px);color:var(--text)}
+.hero-in p:nth-of-type(2){margin-top:24px}
+.trust{max-width:60ch;margin-top:16px;font-size:var(--text-sm);line-height:1.5;color:var(--text)}
+.trust .brew-h{font-weight:400;user-select:all;-webkit-user-select:all}
 .btn{display:inline-flex;align-items:center;min-height:52px;padding:0 26px;background:var(--accent);color:var(--bg);border-radius:6px;font:600 var(--text-body)/1 var(--sans);text-decoration:none;transition:transform 160ms var(--ease),background-color 160ms var(--ease)}
 .btn:hover{transform:translateY(-1px);background:#f5b657}
 .btn:focus-visible{outline-color:var(--text)}
@@ -179,8 +181,22 @@ html:not(.js) .rules input,html:not(.js) .rules .all{display:none}
 .foot-in{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:4px 24px;padding-top:24px;border-top:1px solid #b9c7d0;color:var(--dawn-muted)}
 .foot a{display:inline-block;min-height:44px;color:var(--dawn-text)}
 .foot p{line-height:44px}
-.foot .foot-more{line-height:1.6}
-.foot .foot-more a{display:inline;min-height:0}
+
+/* faq */
+.faq{padding-bottom:0}
+.faq-list{border-top:1px solid var(--rule);max-width:65ch}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:56px;padding:12px 0;font-weight:600;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-size:1.5rem;line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details .prose{padding-bottom:20px}
+
+/* more tools */
+.tool-list{list-style:none;padding:0;border-top:1px solid var(--rule);max-width:65ch}
+.tool-list li{padding:16px 0;border-bottom:1px solid var(--rule)}
+.tool-list a{font-weight:600}
+.tool-list p{margin-top:4px;color:var(--muted)}
 .foot code{font-weight:600}
 
 /* 404 */

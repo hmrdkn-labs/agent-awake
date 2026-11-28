@@ -43,13 +43,15 @@ macOS thermal level "nominal" throughout, redrawn in the night palette as inline
 
 ## Page order
 
-1. Skip link, borderless header (icon, wordmark, links Agents, In a bag, Install, GitHub). Hero (image 1).
+1. Skip link, borderless header (icon, wordmark, links Agents, In a bag, FAQ, Install, GitHub). Hero (image 1): h1, lede (claims 1, 2, 6, 29), one button, trust line with the brew command (claims 19, 21, 30).
 2. Awake only while they work (claims 1, 3, 4).
 3. Works with the agents you use: agent list with signals, the real Settings capture, hooks (claims 5–9, 26–27).
 4. Sleep safeguards with the lid closed: claims 13–16, image 2 band, the chart, readings, four stop rules (claims 10–12, 14).
 5. Pings only when you are away: image 3 (claims 2, 17, 18).
-6. Install: download button, brew command with Copy, signing line, cask line, status (claims 19–25).
-7. Open source, MIT on dawn with image 4 (claim 23). Footer: date, sha, repo, hamardikan.com.
+6. Questions (FAQ, native details): claims 31–36.
+7. Install: download button, brew command with Copy, signing line, cask line, status (claims 19–25).
+8. Open source, MIT on dawn with image 4 (claim 23).
+9. More tools by hmrdkn-labs, on the night surface (claim 37). Footer: date, sha, repo, hamardikan.com.
 
 ## Image prompts (all with the shared style line)
 
@@ -114,10 +116,30 @@ source width) and 1024; the tool does not make 2400.
 | 26 | The one time hooks wait: the Mac is hot or almost out of memory; the agent pauses before its next tool call, up to ten minutes per call, then goes on. | README.md 132, 134, 144–147; `HookGate.swift` `budget = 600` | OK, checked in code |
 | 27 | Antigravity, Cursor, Windsurf and Amp are not held. | README.md 144–147 | OK |
 | 28 | Citations link to GitHub blob URLs pinned at commit 5df817d34c8b21b3b2fa51d54ec374c6bf40c268: CHANGELOG.md L26–L27, AgentCatalog.swift L48–L107, README.md L71–L90. | Lines read at that commit | OK |
+| 29 | Hero lede: a menu bar app for macOS; agents report start, finish and "needs you" through their own hooks; the Mac stays awake only while they work; the phone is pinged when you are away. | README.md 26–27 (hooks: start, turn end, waiting), 28–31 (awake only while work runs; pings while away), 60–61 (menu bar app); claims 1, 2, 6 | OK |
+| 30 | Hero trust line: signed with Developer ID and notarised by Apple · macOS 13 or later · the brew command. | Same as claims 19 and 21 | OK |
+| 31 | FAQ battery: awake only while an agent works; the screen still turns off and locks to save battery; lid-closed mode gives sleep back at 10% battery or drain above 20% an hour; the recorded trip used 41% of the battery in 75 minutes. | README.md 28–29, 41–43, 162–165; claim 10 | OK |
+| 32 | FAQ lid closed: yes with lid-closed mode, off by default, helper approved once in System Settings → Login Items, runs only while work runs; heat is the real risk in a closed bag, prefer AC power; when it gives up with the lid closed and macOS would normally sleep, the Mac sleeps. | README.md 41–43, 155–159, 166–170 | OK |
+| 33 | FAQ agents: Claude Code, Codex, Cursor and the others listed on the page; anything else reports through `agentawake`, for example `agentawake run build -- make all`. | README.md 95–98; claim 5 | OK |
+| 34 | FAQ helper: macOS only lets a closed-lid Mac stay awake with root; root only to switch `pmset disablesleep` and, in one case, `pmset sleepnow`; one XPC call from clients signed with its own Team ID and the app's bundle ID; lease of at most 120 seconds renewed every 30 seconds; normal sleep returns when the lease runs out. Links SECURITY.md at the claim 28 commit; its wording is not quoted (it is out of date on `sleepnow`, a fix is in progress elsewhere). | README.md 155–170 | OK |
+| 35 | FAQ what leaves: pings go only to the channels you set up; by default they name only the agent and project folder; updates are checked against a feed on GitHub; the one-minute strain log stays on your Mac. Not claimed: "no telemetry", "nothing goes to us" (not proven at runtime). | README.md 111–120, 138; `Resources/Info.plist` 16 `SUFeedURL` | OK |
+| 36 | FAQ "How do I remove it?" was dropped. Disconnect removing hooks is claim 8, but nothing in the README or the UI shows how the helper or the app is removed (`HelperInstaller.unregister()` in `Helper.swift` 41 has no caller). | `Sources/AgentAwakeApp` (grep for `HelperInstaller.`) | NOT ON PAGE: open question for the owner |
+| 37 | More tools by hmrdkn-labs: five sibling tools, names and one-line pitches verbatim, in order. Each pitch is condensed from that site's own title, meta description and h1 (read live 2026-11-28). | `~/workspace/sandbox/orchestration-2026-11-28/siblings.md` | OK (owner's ask) |
+
 
 Left off the page (unresolved, research §8–9): any agent count; the word "free"; competitor
 names; download or update-check counts; stars and forks (0).
 
 ## Search (v3)
 
-Title, description, og/twitter text and the agents h2 now carry the query "keep Mac awake while AI agents work" and the named agents (SEO.md in the build folder has the research). JSON-LD `WebSite` + `SoftwareApplication` + `Person` in the head; `softwareVersion` comes from the release at build time and the line is dropped when none was read. The og image is `og.jpg` (87 KB). `sitemap.xml` is written by the build; `robots.txt` points to it; an IndexNow key file sits at the root (not submitted yet). Footer links the four sibling pages. CSP `connect-src` is `'self'` so Lighthouse can fetch robots.txt. No new product claims; not rich-result eligible (no ratings or offers, none invented).
+Title, description, og/twitter text and the agents h2 now carry the query "keep Mac awake while AI agents work" and the named agents (SEO.md in the build folder has the research). JSON-LD `WebSite` + `SoftwareApplication` + `Person` in the head; `softwareVersion` comes from the release at build time and the line is dropped when none was read. The og image is `og.jpg` (87 KB). `sitemap.xml` is written by the build; `robots.txt` points to it; an IndexNow key file sits at the root (not submitted yet). CSP `connect-src` is `'self'` so Lighthouse can fetch robots.txt. No new product claims; not rich-result eligible (no ratings or offers, none invented).
+
+## Revisions 2026-11-28 (marketing)
+
+From `docs/briefs/marketing-audit.md` and the owner's decisions (no agent count, no "free", no competitors, no counts; no demo yet).
+
+- Hero lede says what it is (a menu bar app for macOS) and what differs (hooks, awake only while working, phone ping). New trust line under the one button: signing, macOS 13, the brew command. The command is selectable in one tap; no Copy button in the hero, so the button stays the only one.
+- The four paintings carry alt text starting "Illustration:" (also `og:image:alt`). None is decorative; the Settings capture keeps its UI description.
+- New FAQ before Install: five questions, native `<details>`, no JS. "How do I remove it?" left off (claim 36).
+- Footer `foot-more` line replaced by a "More tools by hmrdkn-labs" section on the night surface above the footer (claim 37). Whiteboard moved there from the footer line.
+- Header nav gets "FAQ".
