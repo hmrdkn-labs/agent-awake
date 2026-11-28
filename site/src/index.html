@@ -367,7 +367,7 @@
         <summary>Does it drain the battery?</summary>
         <div class="prose">
           <p>It keeps the Mac awake only while an agent is working. When the last one finishes, normal sleep comes back, and the screen still turns off and locks to save battery.</p>
-          <p>With the lid closed, lid-closed mode gives sleep back at 10% battery, or when the battery drains faster than 20% an hour. The one recorded trip, 75 minutes in a bag, used 41% of the battery: <a href="#bag">the chart</a> shows it.</p>
+          <p>With the lid closed, lid-closed mode gives sleep back at 10% battery, when macOS reports a serious thermal state, when the battery temperature exceeds 41 °C, or when the battery drains faster than 20% an hour. The one recorded trip, 75 minutes in a bag, used 41% of the battery: <a href="#bag">the chart</a> shows it.</p>
         </div>
       </details>
       <details>
@@ -387,7 +387,7 @@
         <summary>Why does lid-closed mode need a helper, and what can it do?</summary>
         <div class="prose">
           <p>macOS only lets a closed-lid Mac stay awake with root, so a small helper does that one job. It runs as root only to switch <code>pmset disablesleep</code>, and in one case to put the Mac to sleep.</p>
-          <p>It accepts a single call, from clients signed with its own Team ID and the app’s bundle ID: a lease of at most 120 seconds that the app renews every 30 seconds while a session is alive. When the lease runs out, normal sleep comes back. <a href="https://github.com/hmrdkn-labs/agent-awake/blob/5df817d34c8b21b3b2fa51d54ec374c6bf40c268/SECURITY.md">SECURITY.md</a> has the rest.</p>
+          <p>It accepts connections only from clients signed with the app’s bundle ID and its own Team ID. Each request is a lease of at most 120 seconds, and the app renews it every 30 seconds while work runs. <code>disablesleep</code> goes off when the lease runs out, the app quits or crashes, the battery reaches 10%, or the thermal state is serious. <a href="https://github.com/hmrdkn-labs/agent-awake/blob/7c5570fbb5a53cf3379f109c7b245089ca0a2eeb/SECURITY.md">SECURITY.md</a> has the rest.</p>
         </div>
       </details>
       <details>

@@ -51,7 +51,9 @@ h1{margin:0;font:800 clamp(3.5rem,7.5vw,8rem)/.95 var(--display);letter-spacing:
 .lede{max-width:46ch;margin-top:clamp(20px,3vh,32px);color:var(--text)}
 .hero-in p:nth-of-type(2){margin-top:24px}
 .trust{max-width:60ch;margin-top:16px;font-size:var(--text-sm);line-height:1.5;color:var(--text)}
-.trust .brew-h{font-weight:400;user-select:all;-webkit-user-select:all}
+.trust .brew-h{font-weight:400;user-select:all;-webkit-user-select:all;white-space:nowrap}
+.trust .nb{white-space:nowrap;overflow-wrap:normal}
+@media (max-width:700px){.trust .brew-h{display:block;margin-top:6px}}
 .btn{display:inline-flex;align-items:center;min-height:52px;padding:0 26px;background:var(--accent);color:var(--bg);border-radius:6px;font:600 var(--text-body)/1 var(--sans);text-decoration:none;transition:transform 160ms var(--ease),background-color 160ms var(--ease)}
 .btn:hover{transform:translateY(-1px);background:#f5b657}
 .btn:focus-visible{outline-color:var(--text)}
