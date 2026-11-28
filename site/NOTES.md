@@ -88,43 +88,44 @@ source width) and 1024; the tool does not make 2400.
 
 | # | Claim on the page | Source | Status |
 |---|---|---|---|
-| 1 | Keeps the Mac awake only while agents work; normal sleep returns when the last one finishes; the screen still turns off and locks. | README.md 28–29 | OK |
-| 2 | Pings go to your phone only while you are away (idle, locked, lid closed); at the Mac you get a Mac notification. | README.md 30–32 | OK |
-| 3 | When an agent needs you, the Mac stays awake 15 more minutes, then sleeps. | README.md 33–34 | OK |
-| 4 | A quiet agent still running a build keeps the Mac awake; one whose process exited is let go. | README.md 35–36 | OK |
+| 1 | Keeps the Mac awake only while agents work; normal sleep returns when the last one finishes; the screen still turns off and locks. | README.md 36–37 | OK |
+| 2 | Pings go to your phone only while you are away (idle, locked, lid closed); at the Mac you get a Mac notification. | README.md 38–40 | OK |
+| 3 | When an agent needs you, the Mac stays awake 15 more minutes, then sleeps. | README.md 41–42 | OK |
+| 4 | A quiet agent still running a build keeps the Mac awake; one whose process exited is let go. | README.md 43–44 | OK |
 | 5 | The agent list (names). | `Sources/AgentAwakeCore/AgentCatalog.swift` lines 48–107, `AgentSpec(id:` entries | OK |
-| 6 | Per-agent signal: start/done for all; "needs you" for the agents ticked in the README table. | README.md 71–90 | OK |
-| 7 | Detected without setup: herdr panes, and oh-my-pi, Codex and Zed turns. | README.md 92–93 | OK |
-| 8 | Connect adds hooks next to yours, keeps a backup; Disconnect removes exactly what it added. | README.md 66–67 | OK |
-| 9 | Hooks report to the app without approving or denying tools; they normally return at once (the exception is claim 26); they do nothing if the app is not running. | README.md 68–69; `HookGate.swift` 3–12 (never decides; anything unexpected lets the tool run at once; waits only in the gate, up to `budget`), `AgentCatalog.swift` gates | OK, checked in code at 5df817d. Not claimed: "print nothing", because `HookAdapter.stdout` prints a fixed reply for Cursor and Antigravity and `heldStdout` prints a note for Claude Code, Codex and Gemini CLI after a hold |
+| 6 | Per-agent signal: start/done for all; "needs you" for the agents ticked in the README table. | README.md 79–98 | OK |
+| 7 | Detected without setup: herdr panes, and oh-my-pi, Codex and Zed turns. | README.md 100–101 | OK |
+| 8 | Connect adds hooks next to yours, keeps a backup; Disconnect removes exactly what it added. | README.md 74–75 | OK |
+| 9 | Hooks report to the app without approving or denying tools; they normally return at once (the exception is claim 26); they do nothing if the app is not running. | README.md 76–77; `HookGate.swift` 3–12 (never decides; anything unexpected lets the tool run at once; waits only in the gate, up to `budget`), `AgentCatalog.swift` gates | OK, checked in code at 5df817d. Not claimed: "print nothing", because `HookAdapter.stdout` prints a fixed reply for Cursor and Antigravity and `heldStdout` prints a note for Claude Code, Codex and Gemini CLI after a hold |
 | 10 | Trip: version 0.1.2, 75 minutes in a bag, battery 100% → 59% (41% of the battery), thermal level nominal throughout. | CHANGELOG.md 26–27 | OK (author's record) |
 | 11 | 32.8% an hour on average over the trip (41 ÷ 1.25 h; arithmetic printed in "% of the battery"). | Derived from #10 | OK |
-| 12 | Hold at battery 41 °C, pause at 44 °C. | CHANGELOG.md 15–16; README.md 132–133 | OK |
-| 13 | Measured 33–38 °C at a desk, 42–43.5 °C after half an hour working in a bag; two days of log on a MacBook Pro M4 Pro. | README.md 138–139 | OK (author's measurement) |
-| 14 | Lid-closed gives sleep back at 10% battery, when the thermal state is serious, above battery 41 °C, or on drain faster than 20% an hour. | README.md 162–165 | OK |
-| 15 | Lid-closed mode is off by default; a helper you approve once in System Settings → Login Items. | README.md 155–159 | OK |
-| 16 | When lid-closed mode gives up with the lid closed and macOS would normally sleep (no external display in use), the Mac sleeps; lid-closed mode then stays off until the lid opens. | README.md 166–169; CHANGELOG.md 12–14 | OK |
-| 17 | Ping channels: ntfy, Bark, Pushover, Telegram, Discord, Slack. | README.md 111–117 | OK |
-| 18 | By default a ping names only the agent and the project folder. | README.md 119–120 | OK |
-| 19 | Signed with Developer ID and notarised by Apple; macOS 13 or later, Apple silicon or Intel. | README.md 56; cask `depends_on macos: :ventura` | OK |
-| 20 | Updates itself; Settings → General turns that off. | README.md 58 | OK |
-| 21 | `brew install --cask hmrdkn-labs/tap/agent-awake` installs 0.1.4. | README.md 53; cask version 0.1.4 (build checks it equals the latest release tag) | OK (clean-machine install not run: open question) |
+| 12 | Hold at battery 41 °C, pause at 44 °C. | CHANGELOG.md 15–16; README.md 140–141 | OK |
+| 13 | Measured 33–38 °C at a desk, 42–43.5 °C after half an hour working in a bag; two days of log on a MacBook Pro M4 Pro. | README.md 146–147 | OK (author's measurement) |
+| 14 | Lid-closed gives sleep back at 10% battery or lower while on battery power, when the thermal state is serious, above battery 41 °C, or on drain faster than 20% an hour. | README.md 49–51, 170–173; `SECURITY.md` 20–27 | OK |
+| 15 | Lid-closed mode is off by default; a helper you approve once in System Settings → Login Items. | README.md 163, 166–167 | OK |
+| 16 | When lid-closed mode gives up with the lid closed and macOS would normally sleep (no external display in use), the Mac sleeps; lid-closed mode then stays off until the lid opens. | README.md 174–177; CHANGELOG.md 12–14 | OK |
+| 17 | Ping channels: ntfy, Bark, Pushover, Telegram, Discord, Slack. | README.md 119–125 | OK |
+| 18 | By default a ping names only the agent and the project folder. | README.md 127–128 | OK |
+| 19 | Signed with Developer ID and notarised by Apple; macOS 13 or later, Apple silicon or Intel. | README.md 64; cask `depends_on macos: :ventura` | OK |
+| 20 | Updates itself; Settings → General turns that off. | README.md 66 | OK |
+| 21 | `brew install --cask hmrdkn-labs/tap/agent-awake` installs 0.1.4. | README.md 61; cask version 0.1.4 (build checks it equals the latest release tag) | OK (clean-machine install not run: open question) |
 | 22 | Latest release, its date; CI on main; last push; licence MIT. | `gh` at build time, stamped with the build date | OK (snapshot) |
 | 23 | MIT licence; build from source with `swift build && swift test`. | LICENSE; README.md 184–185 | OK |
 | 24 | Not in the Mac App Store, because its sandbox forbids the helper. | README.md 199–200 | OK |
 | 25 | The Homebrew cask and the latest release are both the printed version, checked on the build date. | `gh` at build time; `build.sh` fails when they differ | OK (snapshot) |
-| 26 | The one time hooks wait: the Mac is hot or almost out of memory; the agent pauses before its next tool call, up to ten minutes per call, then goes on. | README.md 132, 134, 144–147; `HookGate.swift` `budget = 600` | OK, checked in code |
-| 27 | Antigravity, Cursor, Windsurf and Amp are not held. | README.md 144–147 | OK |
+| 26 | The one time hooks wait: the Mac is hot or almost out of memory; the agent pauses before its next tool call, up to ten minutes per call, then goes on. | README.md 140, 142, 152–156; `HookGate.swift` `budget = 600` | OK, checked in code |
+| 27 | Antigravity, Cursor, Windsurf and Amp are not held. | README.md 154–156 | OK |
 | 28 | Citations link to GitHub blob URLs pinned at commit 5df817d34c8b21b3b2fa51d54ec374c6bf40c268: CHANGELOG.md L26–L27, AgentCatalog.swift L48–L107, README.md L71–L90. | Lines read at that commit | OK |
-| 29 | Hero lede: a menu bar app for macOS; agents report start, finish and "needs you" through their own hooks; the Mac stays awake only while they work; the phone is pinged when you are away. | README.md 26–27 (hooks: start, turn end, waiting), 28–31 (awake only while work runs; pings while away), 60–61 (menu bar app); claims 1, 2, 6 | OK |
-| 30 | Hero trust line: signed with Developer ID and notarised by Apple · macOS 13 or later · the brew command. | Same as claims 19 and 21 | OK |
-| 31 | FAQ battery: awake only while an agent works; the screen still turns off and locks to save battery; lid-closed mode gives sleep back at 10% battery, on a serious thermal state, above battery 41 °C or on drain above 20% an hour (the chart's four rules, claim 14); the recorded trip used 41% of the battery in 75 minutes. | README.md 28–29, 41–43, 162–165; claims 10, 14 | OK |
-| 32 | FAQ lid closed: yes with lid-closed mode, off by default, helper approved once in System Settings → Login Items, runs only while work runs; heat is the real risk in a closed bag, prefer AC power; when it gives up with the lid closed and macOS would normally sleep, the Mac sleeps. | README.md 41–43, 155–159, 166–170 | OK |
-| 33 | FAQ agents: Claude Code, Codex, Cursor and the others listed on the page; anything else reports through `agentawake`, for example `agentawake run build -- make all`. | README.md 95–98; claim 5 | OK |
-| 34 | FAQ helper: macOS only lets a closed-lid Mac stay awake with root; root only to switch `pmset disablesleep` and, in one case, `pmset sleepnow`; accepts connections only from clients signed with the app's bundle ID and its own Team ID; each acquire is a lease of at most 120 seconds, renewed by the app every 30 seconds while work runs; `disablesleep` goes off when the lease runs out, the app quits or crashes, the battery is at 10% or lower, or the thermal state is serious. Links SECURITY.md pinned at 7c5570fbb5a53cf3379f109c7b245089ca0a2eeb (corrected version on local main). **That commit is not pushed yet, so the link 404s until it is.** | `SECURITY.md` 13–26 at 7c5570f; README.md 155–170; `Sources/AgentAwakeCore/LidGuard.swift` 7 (`renewEvery = 30`) | OK |
-| 35 | FAQ what leaves: pings go only to the channels you set up; by default they name only the agent and project folder; updates are checked against a feed on GitHub; the one-minute strain log stays on your Mac. Not claimed: "no telemetry", "nothing goes to us" (not proven at runtime). | README.md 111–120, 138; `Resources/Info.plist` 16 `SUFeedURL` | OK |
+| 29 | Hero lede: a menu bar app for macOS; agents report start, finish and "needs you" through their own hooks; the Mac stays awake only while they work; the phone is pinged when you are away. | README.md 12–13 (lede), 34–40 (hooks; awake only while work runs; pings while away), 68–70 (menu bar app); claims 1, 2, 6 | OK |
+| 30 | Hero trust line: signed with Developer ID and notarised by Apple · macOS 13 or later · the brew command. | README.md 60–64; same as claims 19 and 21 | OK |
+| 31 | FAQ battery: awake only while an agent works; the screen still turns off and locks to save battery; lid-closed mode gives sleep back at 10% battery or lower while on battery power, on a serious thermal state, above battery 41 °C or on drain above 20% an hour (the chart's four rules, claim 14); the recorded trip used 41% of the battery in 75 minutes. | README.md 36–37, 170–173; `SECURITY.md` 20–27; claims 10, 14 | OK |
+| 32 | FAQ lid closed: yes with lid-closed mode, off by default, helper approved once in System Settings → Login Items, runs only while work runs; heat is the real risk in a closed bag, prefer AC power; when it gives up with the lid closed and macOS would normally sleep, the Mac sleeps. | README.md 49–51, 163–178 | OK |
+| 33 | FAQ agents: Claude Code, Codex, Cursor and the others listed on the page; anything else reports through `agentawake`, for example `agentawake run build -- make all`. | README.md 103–109 (the `run` example at 106); claim 5 | OK |
+| 34 | FAQ helper: macOS only lets a closed-lid Mac stay awake with root; root only to switch `pmset disablesleep` and, in one case, `pmset sleepnow`; accepts connections only from clients signed with the app's bundle ID and its own Team ID; each acquire request grants a lease of at most 120 seconds, renewed by the app every 30 seconds while work runs; `disablesleep` goes off when the lease runs out, the app quits or crashes, the battery is at 10% or lower while on battery power, or the thermal state is serious. Links SECURITY.md pinned at 7c5570fbb5a53cf3379f109c7b245089ca0a2eeb (corrected version on local main). **That commit is not pushed yet, so the link 404s until it is (owner's call; the pin stays).** | `SECURITY.md` 14–27 at 7c5570f; README.md 163–173; `Sources/AgentAwakeCore/LidGuard.swift` 7 (`renewEvery = 30`) | OK |
+| 35 | FAQ what leaves: pings go only to the channels you set up; by default they name only the agent and project folder; updates are checked against a feed on GitHub; the one-minute strain log stays on your Mac. Not claimed: "no telemetry", "nothing goes to us" (not proven at runtime). | README.md 117–128, 145–147; `Resources/Info.plist` 16 `SUFeedURL` | OK |
 | 36 | FAQ "How do I remove it?" was dropped. Disconnect removing hooks is claim 8, but nothing in the README or the UI shows how the helper or the app is removed (`HelperInstaller.unregister()` in `Helper.swift` 41 has no caller). | `Sources/AgentAwakeApp` (grep for `HelperInstaller.`) | NOT ON PAGE: open question for the owner |
 | 37 | More tools by hmrdkn-labs: five sibling tools, names and one-line pitches verbatim, in order. Each pitch is condensed from that site's own title, meta description and h1 (read live 2026-11-28). | `~/workspace/sandbox/orchestration-2026-11-28/siblings.md` | OK (owner's ask) |
+| 38 | Illustration alt text (`site/src/index.html` 18, 88, 165, 352, 431; og:image:alt at 18): each starts "Illustration:" and describes the painting's subject (laptop at a night desk; closed laptop in a bag on a night train; phone on a bedside table; the desk at first light), not product UI. | The generated paintings themselves and their prompts; "Real vs missing" above | OK (artwork, not screenshots) |
 
 
 Left off the page (unresolved, research §8–9): any agent count; the word "free"; competitor
